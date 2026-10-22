@@ -1,0 +1,12 @@
+node_modules/
+preview/dist/
+artifacts/
+releases/
+backups/
+
+.DS_Store
+INSTALLATION.json
+.env
+.env.*
+*.log
+*.map
