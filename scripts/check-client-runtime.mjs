@@ -37,7 +37,7 @@ const sandbox = vm.createContext({
 const load = async (path, id) => { vm.runInContext(await readFile(path, 'utf8'), sandbox, { filename: String(path) }); return modules.get(id); };
 const { SlotRegistry } = await load(`${core}/dsh-client-ui-renderer/lib/client.js`, '@deepseek-ai/dsh-client-ui-renderer');
 const { ThemeRuntime } = await load(`${core}/dsh-client-ui-theme/lib/client.js`, '@deepseek-ai/dsh-client-ui-theme');
-const plugin = await load(new URL('../lib/client.js', import.meta.url), 'dsh-liquid-glass');
+const plugin = await load(new URL('../lib/client.js', import.meta.url), 'dsh-liquid-glass-skin');
 const ctx = new cordis.Context();
 const registry = new SlotRegistry(ctx);
 let durableTheme={preference:'system',fontSize:14,codeFontSize:11,terminalFontSize:13,textFontFamily:'',codeFontFamily:'',terminalFontFamily:''}; const themeListeners=new Set();

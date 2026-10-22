@@ -6,7 +6,7 @@ await build({ entryPoints: ['src/host.js'], outfile: 'lib/index.js', bundle: tru
 await build({
   entryPoints: ['src/client.jsx'], outfile: 'lib/client.js', bundle: true, platform: 'browser', format: 'cjs', target: 'chrome130',
   external: ['react', 'react-dom', 'react/jsx-runtime'], loader: { '.css': 'text' }, sourcemap: true,
-  banner: { js: 'window.__ModuleLoader__.load({id:"dsh-liquid-glass",factory:(require)=>{var module={exports:{}};var exports=module.exports;' },
+  banner: { js: 'window.__ModuleLoader__.load({id:"dsh-liquid-glass-skin",factory:(require)=>{var module={exports:{}};var exports=module.exports;' },
   footer: { js: 'return module.exports;}});' },
 });
 await import('./prepare-native-preview.mjs');

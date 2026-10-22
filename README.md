@@ -111,15 +111,15 @@ npm run preview
 
 ## 本机安装与皮肤市场
 
-发布包为 `releases/dsh-liquid-glass-0.8.0.tgz`，包含预编译 Host 和 Client，无额外运行时依赖。
+发布包名为 `dsh-liquid-glass-skin-0.8.0.tgz`，包含预编译 Host 和 Client，无额外运行时依赖。
 
-此机器使用 DSH 支持的 Cordis 本地文件入口安装，目录为 `~/.dsh-beta/local-plugins/dsh-liquid-glass/0.8.0`。活动 desktop Profile 的 `cordis.patch.yml` 中，`liquid-glass-local` 指向该版本的 `lib/index.js`。具体位置与包校验值记录在 `INSTALLATION.json`。升级不改原有依赖锁文件或包龄策略；操作前备份 Profile 补丁及独立分类数据。
+桌面版可通过本地 `.tgz` 包安装；具体步骤见下方使用说明。
 
 停用本机安装：在 DSH 插件管理中停用 `liquid-glass-local`，或从补丁中移除该条目后重启。插件停用会恢复原始界面，分类数据保留。通过本地文件入口安装的版本，不适用 `dsh plugin remove dsh-liquid-glass` 的 bundle 卸载命令。
 
 按 [dsh-liang-skin](https://github.com/kingOfSoySauce/dsh-liang-skin) 的原生外观接入方式，加入 Liquid Glass 外观入口、全局样式及主页呈现。选择本皮肤时触发当前原生外观按钮，通知参考皮肤退出；选择同一区域内其他外观时退出本皮肤。另监听其他皮肤的 body 标记，以处理部分从市场直接启用的皮肤。这是展示层切换，不会卸载其他插件，也不能保证识别所有第三方皮肤。
 
-[dsh-skin-market](https://github.com/kingOfSoySauce/dsh-skin-market) 使用受审核的皮肤注册表，没有任意本地皮肤注册接口。正式出现在该市场中，需要公开 GitHub 仓库及提交皮肤收录；当前没有发布仓库或向市场提交 PR，也没有改写市场内置目录。**本机已安装不等于已在市场上架。**
+[dsh-skin-market](https://github.com/kingOfSoySauce/dsh-skin-market) 使用受审核的皮肤注册表，没有任意本地皮肤注册接口。正式出现在该市场中，需要公开 GitHub 仓库及提交皮肤收录；代码已发布到公开仓库；市场收录以对应 PR 的审核与合并状态为准。**本机已安装不等于已在市场上架。**
 
 ## 数据与实现
 
