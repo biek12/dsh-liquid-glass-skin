@@ -254,7 +254,7 @@ export function FolderTree({ wide = true, expandSidebar, controller, catalog, ac
       {menu.kind !== 'session' && createSession && <button role="menuitem" onClick={() => beginSession(menu.workspaceId, menu.kind === 'folder' ? menu.id : null)}><Icon name="chat"/>新建会话</button>}
       {menu.kind !== 'session' && <button role="menuitem" onClick={() => { newFolder(menu.workspaceId, menu.kind === 'workspace' ? null : menu.id); setMenu(null); }}><Icon name="plus"/>新建子目录</button>}
       {menu.kind === 'workspace' && renameWorkspace && <button role="menuitem" onClick={() => { setWorkspaceRename(menu); setMenu(null); }}><Icon name="edit"/>重命名工作区</button>}
-      {menu.kind === 'workspace' && onNativeView && <button role="menuitem" onClick={() => { setMenu(null); onNativeView(); }}><Icon name="book"/>更多工作区管理</button>}
+      {menu.kind === 'workspace' && onNativeView && <button role="menuitem" onClick={() => { setMenu(null); onNativeView(); }}><Icon name="book"/>返回默认</button>}
       {menu.kind === 'session' && archiveSession && <><hr/><button role="menuitem" onClick={() => archive(menu)}><Icon name="archive"/>归档会话</button></>}
       {(menu.kind === 'folder' || menu.kind === 'workspace' && removeWorkspace) && <><hr/><button role="menuitem" className="lg-danger" onClick={() => requestRemoval(menu)}><Icon name="trash"/>{menu.kind === 'folder' ? '删除目录' : '移除工作区'}</button></>}
     </RowMenu>}

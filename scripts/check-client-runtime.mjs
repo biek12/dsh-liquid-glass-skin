@@ -30,6 +30,7 @@ const sandbox = vm.createContext({
   matchMedia:()=>media,
   window: { __ModuleLoader__: { load: ({ id, factory }) => modules.set(id, factory(id => { if (!modules.has(id)) throw new Error(`Missing module: ${id}`); return modules.get(id); })) } },
   document, console, AbortController, AbortSignal, structuredClone, MutationObserver: dom.window.MutationObserver, queueMicrotask,
+  setTimeout, clearTimeout,
   setInterval: callback => { poll = callback; return 1; }, clearInterval: () => {},
   fetch: (path, options) => fetch(base + path, options),
 });
@@ -54,6 +55,7 @@ const releaseRoot = registry.register({ name: 'root', children: {
   'conversation.hero.brand.mark': { kind: 'single', scope: 'root' },
   'sidebar.footer.action': { kind: 'list', scope: 'root' },
   'settings.section': { kind: 'list', scope: 'root' },
+  'conversation.input.right': { kind: 'list', scope: 'session' },
 } }, native);
 const releaseNative = registry.register({ name: 'sidebar.workspaces', children: { 'sidebar.workspaces.directoryFlow': {kind:'single',scope:'root'} } }, native);
 const nativePicker = () => null;
@@ -73,6 +75,13 @@ try {
   assert.equal(registry.entries('liquid-glass.workspace.directoryFlow')[0].component,nativePicker);
   assert.equal(registry.entries('liquid-glass.workspace.directoryFlow')[0].inject().pickerKind,'browse');
   assert.equal(body.dataset.lgMotion, 'full');
+  assert.equal(registry.entries('conversation.input.right').length, 0);
+  ctx.provide('remote', {});
+  ctx.provide('remote.session', {});
+  ctx.provide('modelDirectories', { directoryFor: () => { throw new Error('No preview session'); } });
+  await waitFor(() => registry.entries('conversation.input.right').length === 1);
+  assert.equal(registry.entries('conversation.input.right')[0].options.id, 'liquid-glass-effort-slider');
+  assert.equal(document.querySelectorAll('style[data-plugin-css="dsh-liquid-glass-effort-slider"]').length, 1);
   const appearance=createAppearanceSource(ctx); let themeEvents=0; const offTheme=appearance.subscribe(()=>themeEvents++);
   for(const mode of ['light','dark','system']) { await appearance.select(mode); assert.equal(theme.getTheme().preference,mode); assert.equal(durableTheme.preference,mode); assert.equal(state.preferences.theme,true); }
   media.matches=true; for(const fn of mediaListeners)fn();
@@ -98,9 +107,12 @@ try {
   await update({ tree: false, theme: false });
   await waitFor(() => registry.entriesOfSlot('sidebar.workspaces')[0]?.component === native && theme.overrides.size === 0);
   assert.equal(body.dataset.liquidGlass, undefined);
+  await waitFor(() => registry.entries('conversation.input.right').length === 0);
+  assert.equal(document.querySelector('style[data-plugin-css="dsh-liquid-glass-effort-slider"]'), null);
   await update({ tree: true, theme: true });
   await waitFor(() => registry.entriesOfSlot('sidebar.workspaces')[0]?.options.priority === -20);
   assert.equal(theme.overrides.size, 1);
+  await waitFor(() => registry.entries('conversation.input.right').length === 1);
   await dispose();
   assert.equal(registry.entriesOfSlot('sidebar.workspaces')[0].component, native);
   assert.equal(registry.entries('sidebar.footer.action').length, 0);
@@ -109,6 +121,8 @@ try {
   assert.equal(body.dataset.lgMotion, undefined);
   assert.equal(registry.entries('sidebar.brand.name').length, 0);
   assert.equal(registry.entries('conversation.hero.brand.mark').length, 0);
+  assert.equal(registry.entries('conversation.input.right').length, 0);
+  assert.equal(document.querySelector('style[data-plugin-css="dsh-liquid-glass-effort-slider"]'), null);
   console.log('PASS: installed DSH SlotRegistry + ThemeRuntime, bundled client loading, native tree fallback, re-enable and complete unload.');
 } finally {
   await dispose?.(); releaseNativePicker(); releaseNative(); releaseRoot();

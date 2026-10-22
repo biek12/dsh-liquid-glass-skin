@@ -5,7 +5,7 @@ await mkdir('releases', { recursive: true });
 await build({ entryPoints: ['src/host.js'], outfile: 'lib/index.js', bundle: true, platform: 'node', format: 'esm', target: 'node22', sourcemap: true });
 await build({
   entryPoints: ['src/client.jsx'], outfile: 'lib/client.js', bundle: true, platform: 'browser', format: 'cjs', target: 'chrome130',
-  external: ['react', 'react/jsx-runtime'], loader: { '.css': 'text' }, sourcemap: true,
+  external: ['react', 'react-dom', 'react/jsx-runtime'], loader: { '.css': 'text' }, sourcemap: true,
   banner: { js: 'window.__ModuleLoader__.load({id:"dsh-liquid-glass",factory:(require)=>{var module={exports:{}};var exports=module.exports;' },
   footer: { js: 'return module.exports;}});' },
 });

@@ -1,3 +1,5 @@
+import { watchShell } from './dom-schedule.js';
+
 /** Native Appearance integration, following the host DOM contract used by community skins. */
 export function findAppearanceRow(doc = document) {
   for (const row of doc.querySelectorAll('[class$="_cubeRow"], [class*="_cubeRow "]')) {
@@ -8,7 +10,7 @@ export function findAppearanceRow(doc = document) {
 }
 
 export function installSkinChoice({ controller, doc = document }) {
-  let mounted; let disposed = false; let scheduled = false; let selecting = false;
+  let mounted; let disposed = false; let selecting = false;
   const enabled = () => controller.getSnapshot().state.preferences.theme;
   const choose = async value => {
     if (disposed) return;
@@ -24,7 +26,7 @@ export function installSkinChoice({ controller, doc = document }) {
   };
   const sync = () => {
     if (disposed) return;
-    const target = findAppearanceRow(doc);
+    const target = mounted?.isConnected ? { row: mounted.parentElement } : findAppearanceRow(doc);
     if (!target) { mounted?.remove(); mounted = undefined; return; }
     if (!mounted) {
       mounted = doc.createElement('button'); mounted.type = 'button'; mounted.className = 'lg-appearance-choice';
@@ -43,8 +45,7 @@ export function installSkinChoice({ controller, doc = document }) {
     const appearance = findAppearanceRow(doc);
     if (appearance?.row.contains(target)) choose(false).catch(() => {});
   };
-  const observer = new MutationObserver(() => { if (!scheduled) { scheduled = true; queueMicrotask(() => { scheduled = false; sync(); }); } });
-  observer.observe(doc.body, { childList: true, subtree: true });
+  const releaseObserver = watchShell(doc, sync);
   // Skins activated from the market can mount without the Appearance page being open.
   const skinObserver = new MutationObserver(records => {
     if (selecting || !enabled()) return;
@@ -56,13 +57,13 @@ export function installSkinChoice({ controller, doc = document }) {
   const unsubscribe = controller.subscribe(sync); sync();
   return {
     choose,
-    dispose: () => { disposed = true; observer.disconnect(); skinObserver.disconnect(); unsubscribe(); doc.removeEventListener('click', nativeChoice, true); mounted?.remove(); },
+    dispose: () => { disposed = true; releaseObserver(); skinObserver.disconnect(); unsubscribe(); doc.removeEventListener('click', nativeChoice, true); mounted?.remove(); },
   };
 }
 
 /** Small owned additions to the native Hero; native Composer and workspace picker remain intact. */
 export function installShellSkin(doc = document) {
-  const added = new Set(); let queued = false; let stopped = false;
+  const added = new Set(); let stopped = false;
   const sync = () => {
     if (stopped) return;
     for (const headline of doc.querySelectorAll('[class$="_headline"], [class*="_headline "]')) {
@@ -76,7 +77,6 @@ export function installShellSkin(doc = document) {
       intro.append(title, subtitle); body.append(intro); added.add(intro);
     }
   };
-  const observer = new MutationObserver(() => { if (!queued) { queued = true; queueMicrotask(() => { queued = false; sync(); }); } });
-  observer.observe(doc.body, { childList: true, subtree: true }); sync();
-  return () => { stopped = true; observer.disconnect(); for (const node of added) node.remove(); };
+  const releaseObserver = watchShell(doc, sync);
+  return () => { stopped = true; releaseObserver(); for (const node of added) node.remove(); };
 }

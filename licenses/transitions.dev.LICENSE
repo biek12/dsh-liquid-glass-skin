@@ -1,0 +1,25 @@
+Transitions.dev License
+Copyright (c) 2026 Jakub Antalik / Transitions.dev
+
+Summary: you (and any coding agent working for you) may use the transitions
+and skills in this repository in unlimited personal and commercial projects,
+modify them freely, and ship them to your users. The tooling is MIT. The one
+restriction is that you may not redistribute the transitions library itself
+as a competing product.
+
+Permission is granted, free of charge, to any person or automated agent
+obtaining these transitions to:
+
+  - use them in unlimited personal and commercial projects;
+  - copy, paste, and modify them freely;
+  - ship them to end users as part of your own product or website;
+  - install and run the skills in any coding agent (Claude Code, Cursor,
+    GitHub Copilot, Codex, Gemini CLI, and others) to apply the transitions
+    to your code.
+
+Restriction: you may not redistribute the library itself. You may not
+repackage, resell, or publish the collection (or a substantial part of it) as
+a competing transitions library, motion pack, or animation kit. Use the
+transitions in your products, not as a product of their own.
+
+Full terms: https://transitions.dev/terms.html

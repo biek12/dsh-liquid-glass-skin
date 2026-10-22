@@ -1,0 +1,17 @@
+body[data-liquid-glass="on"] [data-lg-wait] :is([data-lg-wait-words],[data-lg-wait-icon]) { display:none; }
+body[data-liquid-glass="on"] .lg-wait-line { display:inline-flex; align-items:center; min-width:0; max-width:100%; font-size:14px; line-height:24px; white-space:nowrap; }
+body[data-liquid-glass="on"] .lg-wait-label { min-width:0; color:var(--lg-muted); }
+body[data-liquid-glass="on"] .lg-wait-clock { flex:none; margin-left:8px; font-size:13px; font-variant-numeric:tabular-nums; color:var(--lg-muted); }
+body[data-liquid-glass="on"] .lg-wait-badge { flex:none; margin-left:8px; padding:0 6px; border-radius:5px; font-size:11px; line-height:16px; color:var(--dsw-alias-state-warn-label,#a77524); background:color-mix(in srgb,currentColor 12%,transparent); }
+body[data-liquid-glass="on"] .lg-wait-line [hidden] { display:none; }
+body[data-liquid-glass="on"] .lg-wait-sweep-band { display:none; }
+body[data-liquid-glass="on"] .lg-wait-swap-shimmer::before { content:attr(data-text); position:absolute; inset:0; pointer-events:none; background-image:var(--lg-status-wash-layers); background-repeat:no-repeat; background-size:var(--lg-status-wash-sizes); -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; animation:lg-status-wash-hue 4000ms linear infinite,lg-status-wash-drift 5000ms ease-in-out infinite; }
+body[data-liquid-glass="on"][data-lg-motion="soft"] .lg-wait-swap-shimmer::before { animation-duration:6000ms,7500ms; }
+body[data-liquid-glass="on"]:is([data-lg-motion="off"],[data-lg-status-glow="false"]) .lg-wait-swap-shimmer::before { animation:none; }
+body[data-liquid-glass="on"][data-lg-status-glow="false"] .lg-wait-swap-shimmer::before { display:none; }
+@media(prefers-reduced-motion:reduce) {
+  body[data-liquid-glass="on"] .lg-wait-chat-wait-dot { animation-play-state:paused!important; }
+  body[data-liquid-glass="on"] .lg-wait-swap-copy { transition:none; transform:none; filter:none; }
+  body[data-liquid-glass="on"] .lg-wait-swap-label { transition:none; }
+  body[data-liquid-glass="on"] .lg-wait-swap-shimmer::before { animation:none; }
+}

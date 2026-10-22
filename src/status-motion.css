@@ -1,0 +1,42 @@
+body[data-liquid-glass="on"] {
+  --lg-status-wash-layers:
+    url("data:image/svg+xml;utf8,<svg viewBox='0 0 67 42' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='0.88'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(0.34726 -1.3118e-7 8.6482e-7 0.89585 33.5 21)'><stop stop-color='rgba(0,110,245,1)' offset='0'/><stop stop-color='rgba(0,110,245,0)' offset='1'/></radialGradient></defs></svg>"),
+    url("data:image/svg+xml;utf8,<svg viewBox='0 0 67 42' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='0.5'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(-1.3 0.25 -1.2633 -2.7471 33.5 21)'><stop stop-color='rgba(0,110,245,1)' offset='0'/><stop stop-color='rgba(0,110,245,0)' offset='1'/></radialGradient></defs></svg>"),
+    url("data:image/svg+xml;utf8,<svg viewBox='0 0 67 42' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)' opacity='0.4'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(1.05 -0.8 0.46018 3.6184 33.5 21)'><stop stop-color='rgba(204,0,167,1)' offset='0'/><stop stop-color='rgba(170,0,204,0)' offset='0.71709'/></radialGradient></defs></svg>"),
+    url("data:image/svg+xml;utf8,<svg viewBox='0 0 67 42' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(-0.51067 -3.3275e-16 -4.3352e-14 -1.1396 33.5 21)'><stop stop-color='rgba(204,0,167,1)' offset='0'/><stop stop-color='rgba(170,0,204,0)' offset='1'/></radialGradient></defs></svg>"),
+    url("data:image/svg+xml;utf8,<svg viewBox='0 0 67 42' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(-0.45 -0.75 1.9052 -0.7091 33.5 21)'><stop stop-color='rgba(255,173,85,1)' offset='0'/><stop stop-color='rgba(255,173,85,0)' offset='1'/></radialGradient></defs></svg>"),
+    url("data:image/svg+xml;utf8,<svg viewBox='0 0 67 42' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(1.25 -0.35 -0.4013 3.5959 33.5 21)'><stop stop-color='rgba(0,204,68,1)' offset='0'/><stop stop-color='rgba(0,196,102,0.75)' offset='0.25'/><stop stop-color='rgba(0,187,136,0.5)' offset='0.5'/><stop stop-color='rgba(0,170,204,0)' offset='1'/></radialGradient></defs></svg>"),
+    url("data:image/svg+xml;utf8,<svg viewBox='0 0 67 42' xmlns='http://www.w3.org/2000/svg' preserveAspectRatio='none'><rect x='0' y='0' height='100%' width='100%' fill='url(%23grad)'/><defs><radialGradient id='grad' gradientUnits='userSpaceOnUse' cx='0' cy='0' r='10' gradientTransform='matrix(-0.87391 0.73043 -4.1482 -1.9503 33.5 21)'><stop stop-color='rgba(0,170,204,1)' offset='0'/><stop stop-color='rgba(0,170,204,0)' offset='1'/></radialGradient></defs></svg>"),
+    linear-gradient(rgb(108, 108, 108) 0%, rgb(216, 216, 216) 100%);
+  --lg-status-wash-sizes:
+    180% 180%, 180% 180%, 180% 180%, 180% 180%, 180% 180%, 180% 180%, 180% 180%, 100% 100%;
+}
+@keyframes lg-status-wash-hue {
+  from { filter: hue-rotate(0deg) saturate(1.3); }
+  to { filter: hue-rotate(-360deg) saturate(1.3); }
+}
+
+@keyframes lg-status-wash-drift {
+  0%, 100% { background-position: 100% 0%, 0% 50%, 100% 50%, 0% 100%, 0% 0%, 50% 0%, 50% 100%, 0 0; }
+  25% { background-position: 100% 100%, 50% 0%, 50% 100%, 0% 0%, 100% 0%, 100% 50%, 0% 50%, 0 0; }
+  50% { background-position: 0% 100%, 100% 50%, 0% 50%, 100% 0%, 100% 100%, 50% 100%, 50% 0%, 0 0; }
+  75% { background-position: 0% 0%, 50% 100%, 50% 0%, 100% 100%, 0% 100%, 0% 50%, 100% 50%, 0 0; }
+}
+
+body[data-liquid-glass="on"] [data-conversation-region="chat"] :is([data-shimmer="true"],[data-text-shimmer="true"]) > :is([class$="_content"],[class*="_content "]) {
+  color:transparent!important;
+  -webkit-text-fill-color:transparent;
+  background-image:var(--lg-status-wash-layers);
+  background-repeat:no-repeat;
+  background-size:var(--lg-status-wash-sizes);
+  -webkit-background-clip:text;
+  background-clip:text;
+  animation:lg-status-wash-hue 4000ms linear infinite,lg-status-wash-drift 5000ms ease-in-out infinite;
+}
+body[data-liquid-glass="on"] [data-conversation-region="chat"] :is([data-shimmer="true"],[data-text-shimmer="true"]) > :is([class$="_content"],[class*="_content "]) * { color:transparent!important; -webkit-text-fill-color:transparent; }
+body[data-liquid-glass="on"][data-lg-motion="soft"] [data-conversation-region="chat"] :is([data-shimmer="true"],[data-text-shimmer="true"]) > :is([class$="_content"],[class*="_content "]) { animation-duration:6000ms,7500ms; }
+body[data-liquid-glass="on"]:is([data-lg-status-glow="false"],[data-lg-motion="off"]) [data-conversation-region="chat"] :is([data-shimmer="true"],[data-text-shimmer="true"]) > :is([class$="_content"],[class*="_content "]) { animation:none!important; filter:none; background:none; color:var(--lg-muted)!important; -webkit-text-fill-color:currentColor; }
+body[data-liquid-glass="on"]:is([data-lg-status-glow="false"],[data-lg-motion="off"]) [data-conversation-region="chat"] :is([data-shimmer="true"],[data-text-shimmer="true"]) > :is([class$="_content"],[class*="_content "]) * { color:inherit!important; -webkit-text-fill-color:currentColor; }
+@media(prefers-reduced-motion:reduce) {
+body[data-liquid-glass="on"] [data-conversation-region="chat"] :is([data-shimmer="true"],[data-text-shimmer="true"]) > :is([class$="_content"],[class*="_content "]) { animation:none!important; filter:none; }
+}
