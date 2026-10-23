@@ -1,9 +1,9 @@
 /** Presentation metadata only. Workspace ownership and execution paths remain owned by DSH. */
 export const STATUSES = { none: '无状态', todo: '未开始', doing: '进行中', done: '已完成', paused: '搁置' };
 export const COLORS = { default: '#8e8e93', blue: '#007aff', purple: '#af52de', pink: '#ff2d55', orange: '#ff9500', green: '#34a853', teal: '#00a5a8' };
-export const DEFAULT_PREFERENCES = Object.freeze({ theme: true, tree: true, motion: 'full', orb: true, statusGlow: true, hoverLine: true, glass: 'frosted', density: 'comfortable', showTags: true, showCounts: true });
-export const PRESENTATION_DEFAULTS = Object.fromEntries(Object.entries(DEFAULT_PREFERENCES).filter(([key]) => !['theme', 'tree'].includes(key)));
-export const emptyState = () => ({ version: 1, revision: 0, folders: [], sessions: {}, preferences: { ...DEFAULT_PREFERENCES } });
+export const DEFAULT_PREFERENCES = Object.freeze({ theme: true, tree: true, motion: 'full', orb: true, statusGlow: true, hoverLine: true, glass: 'frosted', density: 'comfortable', showTags: true, showCounts: true, petEnabled: true, petNotify: true, petSound: true, petDesktop: false, petCharacter: 'nori', petSize: '120', petX: 0.92, petY: 0.86 });
+export const PRESENTATION_DEFAULTS = Object.fromEntries(Object.entries(DEFAULT_PREFERENCES).filter(([key]) => !['theme', 'tree'].includes(key) && !key.startsWith('pet')));
+export const emptyState = () => ({ version: 1, revision: 0, folders: [], sessions: {}, workspaceOrder: [], preferences: { ...DEFAULT_PREFERENCES } });
 const safeId = value => typeof value === 'string' && value.length > 0 && value.length <= 240 && !['__proto__', 'constructor', 'prototype'].includes(value);
 const fail = message => { throw new Error(message); };
 const text = (value, length, label) => typeof value === 'string' && value.trim().length > 0 && value.trim().length <= length ? value.trim() : fail(`${label}不能为空，且最多 ${length} 个字符`);
@@ -20,8 +20,12 @@ export function validateState(input) {
   if (!Array.isArray(input.folders) || input.folders.length > 5000 || !input.sessions || Array.isArray(input.sessions) || typeof input.sessions !== 'object' || Object.keys(input.sessions).length > 50000) fail('目录数据格式不正确');
   if (typeof input.preferences?.theme !== 'boolean' || typeof input.preferences?.tree !== 'boolean') fail('偏好设置格式错误');
   const preferences = { ...DEFAULT_PREFERENCES, ...input.preferences };
-  for (const key of ['theme', 'tree', 'orb', 'statusGlow', 'hoverLine', 'showTags', 'showCounts']) if (typeof preferences[key] !== 'boolean') fail('偏好设置格式错误');
+  for (const key of ['theme', 'tree', 'orb', 'statusGlow', 'hoverLine', 'showTags', 'showCounts', 'petEnabled', 'petNotify', 'petSound', 'petDesktop']) if (typeof preferences[key] !== 'boolean') fail('偏好设置格式错误');
+  if (!['nori', 'yuki', 'mizu'].includes(preferences.petCharacter) || !['96', '120', '156'].includes(preferences.petSize)) fail('未知宠物设置');
+  for (const key of ['petX', 'petY']) if (!Number.isFinite(preferences[key]) || preferences[key] < 0 || preferences[key] > 1) fail('宠物位置无效');
   for (const [key, values] of Object.entries({ motion: ['full', 'soft', 'off'], glass: ['frosted', 'solid'], density: ['comfortable', 'compact'] })) if (!values.includes(preferences[key])) fail('未知外观设置');
+  const workspaceOrder = input.workspaceOrder ?? [];
+  if (!Array.isArray(workspaceOrder) || workspaceOrder.length > 5000 || workspaceOrder.some(id => !safeId(id)) || new Set(workspaceOrder).size !== workspaceOrder.length) fail('工作区顺序无效');
   const byId = new Map();
   for (const folder of input.folders) {
     if (!safeId(folder.id) || !safeId(folder.workspaceId) || byId.has(folder.id)) fail('目录 ID 无效或重复');
@@ -48,7 +52,7 @@ export function validateState(input) {
     }
     validMeta(item);
   }
-  return { ...structuredClone(input), preferences };
+  return { ...structuredClone(input), preferences, workspaceOrder: [...workspaceOrder] };
 }
 export function folderPath(state, id) {
   const path = []; const seen = new Set();
@@ -79,6 +83,17 @@ export function applyOperation(current, op, catalog) {
     peers.splice(index, 0, item); peers.forEach((f, i) => { f.order = i; });
   };
   switch (op.type) {
+    case 'workspace.move': {
+      workspace(op.id);
+      if (op.parentId != null || op.folderId != null) fail('项目只能在顶层排序，不能变成子目录');
+      const ids = catalog.map(w => w.workspaceId);
+      const order = [...(next.workspaceOrder ?? []).filter(id => ids.includes(id)), ...ids.filter(id => !(next.workspaceOrder ?? []).includes(id))];
+      if (op.id === op.beforeId) break;
+      const peers = order.filter(id => id !== op.id);
+      const index = op.beforeId == null ? peers.length : peers.indexOf(op.beforeId);
+      if (index < 0) fail('排序目标已变化，请重试');
+      peers.splice(index, 0, op.id); next.workspaceOrder = peers; break;
+    }
     case 'folder.create': {
       workspace(op.workspaceId); parent(op.parentId, op.workspaceId);
       if (!safeId(op.id) || next.folders.some(f => f.id === op.id)) fail('目录 ID 重复或无效');
@@ -139,4 +154,9 @@ export function applyOperation(current, op, catalog) {
   }
   next.revision += 1;
   return validateState(next);
+}
+
+export function orderedWorkspaces(catalog, state) {
+  const ranks = new Map((state.workspaceOrder ?? []).map((id, i) => [id, i]));
+  return catalog.map((item, index) => ({ item, rank: ranks.get(item.workspaceId) ?? ranks.size + index })).sort((a, b) => a.rank - b.rank).map(({ item }) => item);
 }

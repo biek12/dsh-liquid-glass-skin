@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Icon, useSource } from './ui.jsx';
 import { PRESENTATION_DEFAULTS } from './model.js';
+import { PetSettings } from './pets/pet.jsx';
 
 export function Settings({ controller, skin, appearance }) {
   const runtime = useSource(controller); const p = runtime.state.preferences;
@@ -9,10 +10,10 @@ export function Settings({ controller, skin, appearance }) {
   const set = patch => controller.mutate({ type: 'preferences', patch }).catch(() => {});
   const toggle = (key, title, hint, change) => <label className="lg-setting-row" key={key}><span>{title}<small>{hint}</small></span><input type="checkbox" checked={p[key]} disabled={busy} onChange={e => change ? change(e.target.checked).catch(() => {}) : set({ [key]: e.target.checked })}/></label>;
   const select = (key, title, hint, choices) => <label className="lg-setting-row"><span>{title}<small>{hint}</small></span><select value={p[key]} disabled={busy} onChange={e => set({ [key]: e.target.value })}>{choices.map(([value, text]) => <option key={value} value={value}>{text}</option>)}</select></label>;
-  return <section className="lg-settings" aria-label="Liquid Glass 主题设置">
-    <header><Icon name="glass" size={22}/><div><h2>Liquid Glass</h2><p>外观调整即时生效，并保存在本机。</p></div></header>
+  return <section className="lg-settings" aria-busy={busy || theme.changing} aria-label="DSH 超级工作台设置">
+    <header><Icon name="glass" size={22}/><div><h2>DSH 超级工作台</h2><p>主题、目录、宠物与上下文。设置即时保存到本机。</p></div></header>
     <fieldset><legend>外观与目录</legend>
-      {toggle('theme', '启用主题', '使用 Liquid Glass 玻璃材质与动效。', value => skin.choose(value))}
+      {toggle('theme', '启用 Liquid Glass 主题', '使用 Liquid Glass 玻璃材质与动效。', value => skin.choose(value))}
       <div className="lg-setting-row lg-appearance-row"><span>外观模式<small>与 DSH 外观同步；跟随系统时自动切换。</small></span><div className="lg-appearance-modes" role="group" aria-label="外观模式">{[['light', '明亮'], ['dark', '暗黑'], ['system', '跟随系统']].map(([mode, label]) => <button type="button" key={mode} aria-pressed={theme.preference === mode} disabled={busy || theme.changing} onClick={async () => { try { await appearance.select(mode); setAppearanceError(''); } catch (error) { setAppearanceError(error.message); } }}>{label}</button>)}</div></div>
       {select('glass', '玻璃材质', '侧栏和菜单的透光程度。', [['frosted', '通透磨砂'], ['solid', '实色清晰']])}
       {toggle('tree', '工作区子目录', '关闭后使用原生工作区视图，已存分类保留。')}
@@ -26,6 +27,7 @@ export function Settings({ controller, skin, appearance }) {
       {toggle('statusGlow', '思考与工具状态动效', '控制等待栏的渐变文字、文字切换与轮换圆点动画。')}
       {toggle('hoverLine', '会话悬停光线', '光线从会话下方中间向两侧展开。')}
     </fieldset>
+    <PetSettings controller={controller}/>
     <footer><button className="lg-secondary" disabled={busy} onClick={() => set({ ...PRESENTATION_DEFAULTS })}>恢复外观默认</button><span role="status">{runtime.saving ? '正在保存…' : '分类、标记与主题启用状态不会被重置。'}</span></footer>
     {runtime.error && <p role="alert" className="lg-error">{runtime.error}</p>}
     {appearanceError && <p role="alert" className="lg-error">{appearanceError}</p>}

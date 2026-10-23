@@ -1,7 +1,7 @@
 // Local QA fixture only. Native CSS is read from this machine's DSH installation,
 // excluded from the plugin package and source control.
 import { readFile, writeFile, mkdir } from 'node:fs/promises';
-const core = '/Applications/DSH Desktop Beta.app/Contents/Resources/app/node_modules/@deepseek-ai';
+const core = process.env.DSH_MODULE_ROOT || '/Applications/DSH Desktop Beta.app/Contents/Resources/app/node_modules/@deepseek-ai';
 const extract = async (pkg, moduleName) => {
   const source = await readFile(`${core}/${pkg}/lib/client.js`, 'utf8');
   const marker = `var ${moduleName}_module_css_default = `;

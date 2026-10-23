@@ -13,8 +13,11 @@ import { LiquidOrb } from '../src/orb.jsx';
 import { copyText } from '../src/native.js';
 import { installShellSkin } from '../src/skin.js';
 import { EffortDemo } from './effort-demo.jsx';
+import { FloatingPet, petCss } from '../src/pets/pet.jsx';
+import { PetLab } from './pet-lab.jsx';
 import { sidebar, hero, frame, shimmer } from '../artifacts/native-shell-fixture.js';
 const F = frame.classes; const S = sidebar.classes; const H = hero.classes;
+const petStyle = document.createElement('style'); petStyle.textContent = petCss; document.head.append(petStyle);
 const css = document.createElement('style'); css.textContent = frame.css + sidebar.css + hero.css + shimmer.css + themeCss + statusMotionCss + previewCss; document.head.append(css); document.documentElement.dataset.platform = 'darwin';
 
 const catalog = [
@@ -44,7 +47,7 @@ const controller = createController({ initial: saved, poll: false, persist: asyn
 } });
 
 const schemeKey = 'dsh.preview.appearance';
-const savedScheme = localStorage.getItem(schemeKey); const systemMedia = matchMedia('(prefers-color-scheme: dark)');
+const savedScheme = localStorage.getItem(schemeKey);
 let previewTheme = { preference:['light','dark','system'].includes(savedScheme) ? savedScheme : 'system' };
 const themeListeners = new Set();
 const previewContext = { on:(_,listener) => { themeListeners.add(listener); return () => themeListeners.delete(listener); }, theme: { getTheme:() => previewTheme, setTheme:mode => { previewTheme={preference:mode}; localStorage.setItem(schemeKey,mode); for(const fn of themeListeners)fn(); } } };
@@ -59,7 +62,7 @@ function StatusDemo() {
 }
 function Preview() {
   const runtime = useSource(controller);
-  const [workspaceVersion, setWorkspaceVersion] = useState(0);
+  const [, setWorkspaceVersion] = useState(0);
   const [wide, setWide] = useState(true); const [settingsOpen, setSettingsOpen] = useState(false);
   const [active, setActive] = useState(null); const scheme = useSource(appearance).preference;
   const [extra, setExtra] = useState([]); const [pointerInside, setPointerInside] = useState(false); const [removed, setRemoved] = useState([]); const [archived, setArchived] = useState([]); const [renamed, setRenamed] = useState({}); const [sessionTitles, setSessionTitles] = useState({}); const [pinned, setPinned] = useState([]);
@@ -74,10 +77,10 @@ function Preview() {
   const title = allCatalog.flatMap(w => w.sessions).find(s => s.id === active)?.title ?? '新的开始';
   const create = async (workspaceId, folderId = null) => { const id = crypto.randomUUID(); catalog.find(w => w.workspaceId === workspaceId).sessionIds.push(id); setExtra(s => [...s, { id, title: '新会话', workspaceId }]); if (folderId !== null) await controller.mutate({type:'session.move',id,workspaceId,folderId}); setActive(id); return id; };
   const addWorkspace = async () => { const workspace={workspaceId:crypto.randomUUID(),title:'新工作区',path:'/Preview/workspace',sessionIds:[],sessions:[]}; catalog.push(workspace);setWorkspaceVersion(n=>n+1);return workspace; };
-  return <div className="preview-page"><div className="preview-top"><div><span className="preview-wordmark"><Icon name="glass" size={18}/>DSH <b>Liquid Glass</b></span><span className="preview-tag">交互预览 · 示例数据</span></div><div><EffortDemo controller={controller}/><button className="preview-reset" onClick={() => setSettingsOpen(true)}>主题设置</button><button className="preview-reset" onClick={() => { localStorage.removeItem(demoKey); localStorage.removeItem(`${demoKey}.collapsed`); location.reload(); }}>重置示例</button><div className="preview-appearance" role="group" aria-label="预览外观">{[['light', '浅色'], ['dark', '深色'], ['system', '跟随系统']].map(([key, label]) => <button key={key} aria-pressed={scheme === key} onClick={() => appearance.select(key)}>{label}</button>)}</div></div></div>
+  return <div className="preview-page"><FloatingPet controller={controller}/><div className="preview-top"><div><span className="preview-wordmark"><Icon name="glass" size={18}/>DSH <b>超级工作台</b></span><span className="preview-tag">交互预览 · 示例数据</span></div><div><EffortDemo controller={controller}/><button className="preview-reset" onClick={() => setSettingsOpen(true)}>DSH 超级工作台</button><button className="preview-reset" onClick={() => { localStorage.removeItem(demoKey); localStorage.removeItem(`${demoKey}.collapsed`); location.reload(); }}>重置示例</button><div className="preview-appearance" role="group" aria-label="预览外观">{[['light', '浅色'], ['dark', '深色'], ['system', '跟随系统']].map(([key, label]) => <button key={key} aria-pressed={scheme === key} onClick={() => appearance.select(key)}>{label}</button>)}</div></div></div>
     <div className={`preview-window ${F.frame}`} data-sidebar-collapsed={!wide || undefined} style={{ gridTemplateColumns: `${wide ? 280 : 64}px minmax(0,1fr) 0px` }}><div className={F.sidebarCol}><aside style={{ width:wide ? 280 : 64 }} className={[S.root, !wide && S.collapsed, !pointerInside && S.quietBars].filter(Boolean).join(' ')} onPointerEnter={() => setPointerInside(true)} onPointerLeave={() => setPointerInside(false)}>
       <div className={S.topStrip}><span className="preview-traffic"><i/><i/><i/></span></div>
-      <div className={S.logoRow}><div className={S.brand} style={{ display:wide ? undefined : 'none' }}><span className={S.brandIdentity}><span className={S.brandMark}><Icon name="glass" size={24}/></span>{wide && <span className={S.brandName}><span className="lg-wordmark">DSH <small>Liquid Glass</small></span></span>}</span></div><button className={S.iconButton} aria-label={wide ? "收起侧栏" : "展开侧栏"} onClick={() => setWide(!wide)}><Icon name="book"/></button></div>
+      <div className={S.logoRow}><div className={S.brand} style={{ display:wide ? undefined : 'none' }}><span className={S.brandIdentity}><span className={S.brandMark}><Icon name="glass" size={24}/></span>{wide && <span className={S.brandName}><span className="lg-wordmark">DSH <small>超级工作台</small></span></span>}</span></div><button className={S.iconButton} aria-label={wide ? "收起侧栏" : "展开侧栏"} onClick={() => setWide(!wide)}><Icon name="book"/></button></div>
       <button className={S.newSession} onClick={() => setActive(null)}><Icon name="plus" size={16}/>{wide && '新会话'}</button>
       <nav className={S.panelList}>{[['glass', '插件'], ['sun', '自动化任务'], ['book', '上下文洞察'], ['sliders', '记忆系统']].map(([icon, label]) => <button key={label} className={S.panelRow} title="示例导航"><span className={S.panelGlyph}><Icon name={icon}/></span>{wide && <span className={S.panelTitle}>{label}</span>}</button>)}</nav>
       <div className={S.regionArea}><FolderTree wide={wide} expandSidebar={() => setWide(true)} controller={controller} catalog={allCatalog} activeId={active} openSession={setActive} createSession={create} createWorkspace={addWorkspace} renameWorkspace={async (id, title) => setRenamed(s => ({ ...s, [id]: title }))} removeWorkspace={async id => setRemoved(s => [...s, id])} archiveSession={async id => setArchived(s => [...s, id])} unarchiveSession={async id => setArchived(s => s.filter(i => i !== id))}
@@ -93,4 +96,4 @@ function Preview() {
     {settingsOpen && <div className="preview-settings-backdrop" onClick={e => { if (e.target === e.currentTarget) setSettingsOpen(false); }}><div role="dialog" aria-label="主题设置预览" className="preview-settings"><button className="lg-icon-button preview-settings-close" aria-label="关闭主题设置" onClick={() => setSettingsOpen(false)}><Icon name="close"/></button><Settings controller={controller} appearance={appearance} skin={{ choose:value => controller.mutate({ type:'preferences', patch:{ theme:value } }) }}/></div></div>}
   </div>;
 }
-createRoot(document.getElementById('root')).render(<Preview/>);
+createRoot(document.getElementById('root')).render(location.search.includes('pet-lab') ? <PetLab/> : <Preview/>);

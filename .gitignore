@@ -1,12 +1,16 @@
+.DS_Store
 node_modules/
+/lib/
 preview/dist/
 artifacts/
 releases/
 backups/
-
-.DS_Store
+coverage/
 INSTALLATION.json
+*.log
 .env
 .env.*
-*.log
-*.map
+!.env.example
+
+# Generated adapter; source is the pinned upstream bundle.
+/src/vendor/context-client.cjs

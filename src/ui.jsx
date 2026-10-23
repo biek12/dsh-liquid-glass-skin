@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { RailMenu } from './rail-menu.jsx';
 import { RowMenu } from './menu.jsx';
-import { COLORS, STATUSES, defaultMeta, folderPath } from './model.js';
+import { COLORS, STATUSES, defaultMeta, folderPath, orderedWorkspaces } from './model.js';
 
 const paths = {
   folder: 'M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z',
@@ -53,7 +53,7 @@ function Editor({ editor, state, controller, close }) {
   };
   const remove = async () => { setBusy(true); try { await controller.mutate({ type: 'folder.delete', id: editor.id }); close(); } catch (e) { setError(e.message); setBusy(false); } };
   return <Modal title={creating ? '新建子目录' : isFolder ? '编辑目录' : '会话标记与归类'} close={() => { if (!busy) close(); }}>
-    <form onSubmit={submit}>
+    <form aria-busy={busy} onSubmit={submit}>
       {isFolder && <label>目录名称<input autoFocus required maxLength={80} value={draft.name} placeholder="例如：产品设计" onChange={e => patch('name', e.target.value)}/></label>}
       {!isFolder && <p className="lg-editor-session">{editor.title}</p>}
       <label>{isFolder ? '上级目录' : '所在目录'}<select value={(isFolder ? draft.parentId : draft.folderId) ?? ''} onChange={e => patch(isFolder ? 'parentId' : 'folderId', e.target.value || null)}><option value="">工作区根目录</option>{folders.map(f => <option key={f.id} value={f.id}>{folderPath(state, f.id)}</option>)}</select></label>
@@ -70,7 +70,7 @@ function Editor({ editor, state, controller, close }) {
 function NameEditor({ target, rename, close }) {
   const noun = ({folder:'目录',workspace:'工作区',session:'会话'})[target.kind];
   const [title, setTitle] = useState(target.title); const [busy, setBusy] = useState(false); const [error, setError] = useState('');
-  return <Modal title={`重命名${noun}`} close={() => { if (!busy) close(); }}><form onSubmit={async e => { e.preventDefault(); setBusy(true); setError(''); try { await rename(target.id, title.trim()); close(); } catch (e) { setError(e.message); } finally { setBusy(false); } }}><label>{noun}名称<input required maxLength={target.kind === 'session' ? 160 : 80} value={title} onChange={e => setTitle(e.target.value)}/></label>{error && <p role="alert" className="lg-error">{error}</p>}<footer><span/><div><button type="button" className="lg-secondary" disabled={busy} onClick={close}>取消</button><button className="lg-primary" disabled={busy}>保存</button></div></footer></form></Modal>;
+  return <Modal title={`重命名${noun}`} close={() => { if (!busy) close(); }}><form aria-busy={busy} onSubmit={async e => { e.preventDefault(); setBusy(true); setError(''); try { await rename(target.id, title.trim()); close(); } catch (e) { setError(e.message); } finally { setBusy(false); } }}><label>{noun}名称<input required maxLength={target.kind === 'session' ? 160 : 80} value={title} onChange={e => setTitle(e.target.value)}/></label>{error && <p role="alert" className="lg-error">{error}</p>}<footer><span/><div><button type="button" className="lg-secondary" disabled={busy} onClick={close}>取消</button><button className="lg-primary" disabled={busy}>保存</button></div></footer></form></Modal>;
 }
 function isDescendant(id, parentId, state) {
   const seen = new Set();
@@ -78,7 +78,7 @@ function isDescendant(id, parentId, state) {
   return false;
 }
 
-export function FolderTree({ wide = true, expandSidebar, controller, catalog, activeId, openSession, createSession, createWorkspace, onNativeView, renameWorkspace, removeWorkspace, archiveSession, unarchiveSession, renameSession, pinSession, unpinSession, forkSession, copySessionId, storageKey = 'dsh.liquid-glass.collapsed.v1' }) {
+export function FolderTree({ wide = true, controller, catalog, activeId, openSession, createSession, createWorkspace, onNativeView, renameWorkspace, removeWorkspace, archiveSession, unarchiveSession, renameSession, pinSession, unpinSession, forkSession, copySessionId, storageKey = 'dsh.liquid-glass.collapsed.v1' }) {
   const runtime = useSource(controller); const state = runtime.state;
   const [query, setQuery] = useState(''); const [searchOpen, setSearchOpen] = useState(false); const [filter, setFilter] = useState('all');
   const [filtersOpen, setFiltersOpen] = useState(false); const [statusFilter, setStatusFilter] = useState('all'); const [tagFilter, setTagFilter] = useState(''); const [colorFilter, setColorFilter] = useState('all');
@@ -87,7 +87,7 @@ export function FolderTree({ wide = true, expandSidebar, controller, catalog, ac
   const dragged = useRef(null); const dropRef = useRef(null); const treeRef = useRef();
   const [notice, setNotice] = useState('');
   useEffect(() => { if (!notice) return; const timer = setTimeout(() => setNotice(''), 3200); return () => clearTimeout(timer); }, [notice]); const [workspaceRename, setWorkspaceRename] = useState(null); const [nativeBusy, setNativeBusy] = useState(false); const [undoArchive, setUndoArchive] = useState(null);
-  useEffect(() => { try { localStorage.setItem(storageKey, JSON.stringify(collapsed)); } catch {} }, [collapsed, storageKey]);
+  useEffect(() => { try { localStorage.setItem(storageKey, JSON.stringify(collapsed)); } catch { /* Storage can be unavailable; collapse remains usable in memory. */ } }, [collapsed, storageKey]);
   useEffect(() => { if (!wide) { setMenu(null); setDrop(null); dragged.current = null; dropRef.current = null; } }, [wide]);
   const visibleWorkspaces = new Set(catalog.map(w => w.workspaceId)); const visibleSessions = new Set(catalog.flatMap(w => w.sessions.map(s => s.id)));
   const tags = [...new Set([...state.folders.filter(f => visibleWorkspaces.has(f.workspaceId)), ...Object.entries(state.sessions).filter(([id]) => visibleSessions.has(id)).map(([, s]) => s)].flatMap(i => i.tags))].sort();
@@ -139,9 +139,15 @@ export function FolderTree({ wide = true, expandSidebar, controller, catalog, ac
   const match = (item, title) => (!query || `${title} ${item.tags.join(' ')}`.toLowerCase().includes(query.toLowerCase())) && (filter !== 'starred' || item.starred) && (statusFilter === 'all' || item.status === statusFilter) && (!tagFilter || item.tags.includes(tagFilter)) && (colorFilter === 'all' || item.color === colorFilter);
   const filtered = query || filter === 'starred' || statusFilter !== 'all' || tagFilter || colorFilter !== 'all';
   const total = catalog.reduce((sum, w) => sum + w.sessions.length, 0);
-  const beginDrag = (event, item) => { dragged.current = item; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData(DRAG_TYPE, JSON.stringify(item)); setNotice('拖到目录内归类，拖到行间调整顺序'); };
+  const beginDrag = (event, item) => { dragged.current = item; event.dataTransfer.effectAllowed = 'move'; event.dataTransfer.setData(DRAG_TYPE, JSON.stringify(item)); setNotice(item.kind === 'workspace' ? '拖到项目行前后调整顺序；项目不能成为子目录' : '拖到目录内归类，拖到行间调整顺序'); };
   const dropTarget = (event, target) => {
-    event.stopPropagation(); const source = dragged.current;
+    event.stopPropagation(); dropRef.current = null; setDrop(null); const source = dragged.current;
+    if (source?.kind === 'workspace') {
+      if (busy || filtered || target.kind !== 'workspace' || source.id === target.id) return;
+      event.preventDefault(); event.dataTransfer.dropEffect = 'move';
+      const rect = event.currentTarget.getBoundingClientRect();
+      dropRef.current = { ...target, position: event.clientY < rect.top + rect.height / 2 ? 'before' : 'after' }; setDrop(dropRef.current); return;
+    }
     if (catalog.find(w => w.workspaceId === target.workspaceId)?.allowFolders === false) return;
     if (busy || filtered || !source || source.workspaceId !== target.workspaceId || source.id === target.id) return;
     if (source.kind === 'folder' && target.kind === 'folder' && isDescendant(target.id, source.id, state)) return;
@@ -154,7 +160,14 @@ export function FolderTree({ wide = true, expandSidebar, controller, catalog, ac
   const commitDrop = event => {
     event.preventDefault(); event.stopPropagation(); const source = dragged.current; const target = dropRef.current;
     setDrop(null); dropRef.current = null; dragged.current = null;
-    if (!source || !target || source.workspaceId !== target.workspaceId) return;
+    if (!source || !target) return;
+    if (source.kind === 'workspace') {
+      if (target.kind !== 'workspace' || !['before', 'after'].includes(target.position)) return;
+      const siblings = orderedWorkspaces(catalog, state).map(w => w.workspaceId);
+      const beforeId = target.position === 'before' ? target.id : siblings[siblings.indexOf(target.id) + 1] ?? null;
+      mutate({ type: 'workspace.move', id: source.id, beforeId }); return;
+    }
+    if (source.workspaceId !== target.workspaceId) return;
     let parentId = target.kind === 'workspace' ? null : target.kind === 'folder' && target.position === 'inside' ? target.id : target.parentId;
     let beforeId = null;
     if (target.position !== 'inside' && source.kind === target.kind) {
@@ -199,7 +212,7 @@ export function FolderTree({ wide = true, expandSidebar, controller, catalog, ac
     return <React.Fragment key={item.id}><div role="treeitem" aria-level={level} aria-expanded={kind === 'session' ? undefined : expanded} aria-selected={isActive} tabIndex={0} data-id={item.id} data-kind={kind} data-workspace={item.workspaceId}
       className={`lg-tree-row ${isActive ? 'is-active' : ''} ${drop?.id === item.id ? `drop-${drop.position}` : ''} ${kind === 'workspace' ? 'lg-workspace-row' : ''}`}
       style={{ '--depth': level - 1, '--row-color': COLORS[meta.color] }} onKeyDown={keyboard}
-      draggable={editable && kind !== 'workspace' && !busy && !filtered} onDragStart={e => beginDrag(e, target)} onDragEnd={() => { dragged.current = null; dropRef.current = null; setDrop(null); }} onDragOver={e => dropTarget(e, target)} onDrop={commitDrop}
+      draggable={(editable || kind === 'workspace') && !busy && !filtered} onDragStart={e => beginDrag(e, target)} onDragEnd={() => { dragged.current = null; dropRef.current = null; setDrop(null); }} onDragOver={e => dropTarget(e, target)} onDrop={commitDrop}
       onContextMenu={e => { if (editable) showMenu(e, { ...target, title }, true); }}
       onClick={() => { if (kind === 'session') openSession(item.id); else if (filtered) setNotice('清除筛选后可折叠与排序目录'); else toggle(item.id); }}>
       {kind === 'session' && <span className="lg-hover-underline" aria-hidden="true"/>}
@@ -233,7 +246,7 @@ export function FolderTree({ wide = true, expandSidebar, controller, catalog, ac
     {filtersOpen && <div className="lg-filters"><select aria-label="按手动状态筛选" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}><option value="all">全部状态</option>{Object.entries(STATUSES).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</select><select aria-label="按标签筛选" value={tagFilter} onChange={e => setTagFilter(e.target.value)}><option value="">全部标签</option>{tags.map(tag => <option key={tag}>{tag}</option>)}</select><select aria-label="按颜色筛选" value={colorFilter} onChange={e => setColorFilter(e.target.value)}><option value="all">全部颜色</option>{Object.keys(COLORS).map(c => <option value={c} key={c}>{({ default: '灰色', blue: '蓝色', purple: '紫色', pink: '粉色', orange: '橙色', green: '绿色', teal: '青色' })[c]}</option>)}</select></div>}
     {filtered && <button className="lg-clear-filter" onClick={clearFilters}>清除筛选 · 恢复完整目录</button>}
     <div ref={treeRef} role="tree" aria-label="会话目录树" aria-busy={busy} className="lg-tree-list">
-      {catalog.map(w => {
+      {orderedWorkspaces(catalog, state).map(w => {
         const expanded = !!filtered || !collapsed[w.workspaceId];
         return row({ item: { id: w.workspaceId, workspaceId: w.workspaceId }, kind: 'workspace', level: 1, parentId: null, title: w.title, expanded, count: w.sessions.length, children: <>{branch(w.workspaceId, null, 2)}{!filtered && w.sessions.length === 0 && childFolders(w.workspaceId, null).length === 0 && <p className="lg-empty-inline">在这里新建目录，整理你的会话</p>}{w.allowFolders !== false && <button className="lg-new-session" disabled={busy} onClick={() => beginSession(w.workspaceId)}><Icon name="plus" size={13}/>新建会话</button>}</> });
       })}

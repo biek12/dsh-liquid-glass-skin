@@ -1,11 +1,11 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Icon } from './ui.jsx';
-import { COLORS } from './model.js';
+import { COLORS, orderedWorkspaces } from './model.js';
 import { placeMenu } from './menu.jsx';
 
 /** Project only catalog-owned primary sessions; the quick menu never changes classification. */
 export function railChildren(state, catalog, parent) {
-  if (!parent) return catalog.map(w => ({kind:'workspace',id:w.workspaceId,title:w.title,workspaceId:w.workspaceId,count:w.sessions.length}));
+  if (!parent) return orderedWorkspaces(catalog, state).map(w => ({kind:'workspace',id:w.workspaceId,title:w.title,workspaceId:w.workspaceId,count:w.sessions.length}));
   const workspace = catalog.find(w => w.workspaceId === parent.workspaceId); if (!workspace) return [];
   const folderId = parent.kind === 'workspace' ? null : parent.id;
   const folders = state.folders.filter(f => f.workspaceId === workspace.workspaceId && f.parentId === folderId).sort((a,b) => a.order-b.order).map(f => ({...f,kind:'folder',title:f.name}));
@@ -51,7 +51,7 @@ export function RailMenu({ state, catalog, activeId, openSession, createSession,
     event.preventDefault();const buttons=[...event.currentTarget.closest('.lg-cascade-column').querySelectorAll('[role="menuitem"]:not(:disabled)')];const i=buttons.indexOf(document.activeElement);
     buttons[key==='Home'?0:key==='End'?buttons.length-1:(i+(key==='ArrowDown'?1:-1)+buttons.length)%buttons.length]?.focus();
   };
-  return <section className="lg-workspace-rail" aria-label="工作区快捷菜单">
+  return <section className="lg-workspace-rail" aria-busy={working} aria-label="工作区快捷菜单">
     <button ref={trigger} className="lg-rail-button" aria-label="浏览工作区与会话" aria-haspopup="menu" aria-expanded={open} title={failure || "浏览工作区与会话"} disabled={working} onPointerEnter={()=>show()} onPointerLeave={scheduleClose} onClick={()=>show(true)} onKeyDown={e=>{if(['ArrowDown','ArrowRight'].includes(e.key)){e.preventDefault();show(true);}}}><Icon name="book" size={20}/>{(error||failure)&&<i className="lg-rail-error"/>}</button>
     {open&&<div ref={popup} popover="manual" className="lg-cascade" aria-label="工作区悬浮目录" onPointerEnter={cancelClose} onPointerLeave={scheduleClose}>
       {visible.map(({parent,rows},index)=>{const level=first+index;return <section className="lg-cascade-column" data-level={level} key={parent?.id??'root'}>
@@ -62,7 +62,7 @@ export function RailMenu({ state, catalog, activeId, openSession, createSession,
           {!rows.length&&<p className="lg-cascade-empty">这里还没有目录或会话</p>}
         </div>
         {parent&&createSession&&<footer><button role="menuitem" onKeyDown={e=>keyboard(e,level)} disabled={working} onClick={()=>run(()=>createSession(parent.workspaceId,parent.kind==='folder'?parent.id:null))}><Icon name="plus" size={14}/>新建会话</button></footer>}
-        {!parent&&<footer>{failure&&<p role="alert" className="lg-cascade-error">{failure}</p>}{createWorkspace&&<button role="menuitem" disabled={working} onKeyDown={e=>keyboard(e,level)} onClick={()=>run(createWorkspace,true)}><Icon name="plus" size={14}/>添加工作区</button>}{onNativeView&&<><button role="menuitem" onKeyDown={e=>keyboard(e,level)} onClick={()=>{close();onNativeView();}}><Icon name="folder" size={14}/>更多工作区管理</button></>}</footer>}
+        {!parent&&<footer>{failure&&<p role="alert" className="lg-cascade-error">{failure}</p>}{createWorkspace&&<button role="menuitem" disabled={working} onKeyDown={e=>keyboard(e,level)} onClick={()=>run(createWorkspace,true)}><Icon name="plus" size={14}/>添加工作区</button>}{onNativeView&&<><button role="menuitem" onKeyDown={e=>keyboard(e,level)} onClick={()=>{close();onNativeView();}}><Icon name="folder" size={14}/>返回默认</button></>}</footer>}
       </section>;})}
     </div>}
   </section>;

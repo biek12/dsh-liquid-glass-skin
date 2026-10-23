@@ -1,3 +1,6 @@
+import { version } from '../package.json';
+import { contextPlugin } from './context-plugin.js';
+import { installContext } from './context.jsx';
 import React, { useEffect, useSyncExternalStore } from 'react';
 import { FolderTree, useSource } from './ui.jsx';
 import { Settings, FooterToggle } from './settings.jsx';
@@ -16,6 +19,10 @@ import { DIRECTORY_FLOW, installDirectoryFlow } from './directory-flow.js';
 import { createWorkspacePicker } from './workspace-picker.js';
 import { createAppearanceSource } from './appearance.js';
 import { installEffortSlider } from './effort-slider.js';
+import { installSurfaceMotion } from './surface-motion.js';
+import surfaceMotionCss from './surface-motion.css';
+import { petCss } from './pets/pet.jsx';
+import { installPet } from './pets/install.jsx';
 
 export const inject = ['theme', 'slots', 'uiWorkspace', 'workspaces', 'sessions', 'configForms'];
 const PALETTE = {
@@ -49,15 +56,19 @@ function createTreeComponent(ctx, controller, workspacePicker) {
   };
 }
 export function apply(ctx) {
+  const integratedContext = contextPlugin();
+  ctx.inject(integratedContext.inject, scope => { scope.plugin(integratedContext); });
   ctx.effect(() => {
-    const style = document.createElement('style'); style.dataset.plugin = 'dsh-liquid-glass'; style.textContent = css + statusMotionCss + waitVendorCss + waitLineCss; document.head.append(style);
+    const style = document.createElement('style'); style.dataset.plugin = 'dsh-liquid-glass'; style.textContent = css + statusMotionCss + waitVendorCss + waitLineCss + surfaceMotionCss + petCss; document.head.append(style);
     const controller = createController();
+    const context = installContext(ctx);
+    const releasePet = installPet({ controller, context });
     const workspacePicker = createWorkspacePicker({ createWorkspace:input => ctx.workspaces.create(input), available:() => ctx.slots.entries(DIRECTORY_FLOW).length > 0 });
     const releaseDirectoryFlow = installDirectoryFlow(ctx);
     const Tree = createTreeComponent(ctx, controller, workspacePicker);
     const skin = installSkinChoice({ controller });
     const appearance = createAppearanceSource(ctx);
-    let releaseTree; let releaseTokens; let releaseShell; let releaseEffort; let releaseWaiting; let releaseBrands = []; let themeEnabled; let treeEnabled;
+    let releaseTree; let releaseTokens; let releaseShell; let releaseEffort; let releaseWaiting; let surfaceMotion; let releaseBrands = []; let themeEnabled; let treeEnabled;
     const sync = () => {
       const runtime = controller.getSnapshot();
       if (!runtime.ready) return;
@@ -70,23 +81,27 @@ export function apply(ctx) {
           releaseShell = installShellSkin();
           releaseEffort = installEffortSlider(ctx, controller);
           releaseWaiting = installWaitingLine(ctx, controller);
+          surfaceMotion = installSurfaceMotion({ controller, appearance });
           releaseBrands = [
-            ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({ name: 'sidebar.brand.name', priority: -20 }, () => <span className="lg-wordmark">DSH <small>Liquid Glass</small></span>)),
+            ctx.slots.inject('sidebar.brand.name', () => ctx.slots.register({ name: 'sidebar.brand.name', priority: -20 }, () => <span className="lg-wordmark">DSH <small>超级工作台</small></span>)),
             ctx.slots.inject('conversation.hero.brand.mark', () => ctx.slots.register({ name: 'conversation.hero.brand.mark', priority: -20 }, () => <LiquidOrb/>)),
           ];
         }
-        else { delete document.body.dataset.liquidGlass; releaseTokens?.(); releaseTokens = undefined; releaseShell?.(); releaseShell = undefined; releaseEffort?.(); releaseEffort = undefined; releaseWaiting?.(); releaseWaiting = undefined; releaseBrands.forEach(release => release()); releaseBrands = []; }
+        else { surfaceMotion?.dispose(); surfaceMotion = undefined; delete document.body.dataset.liquidGlass; releaseTokens?.(); releaseTokens = undefined; releaseShell?.(); releaseShell = undefined; releaseEffort?.(); releaseEffort = undefined; releaseWaiting?.(); releaseWaiting = undefined; releaseBrands.forEach(release => release()); releaseBrands = []; }
       }
       if (prefs.tree !== treeEnabled) {
-        if (prefs.tree) { releaseTree = ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({ name: 'sidebar.workspaces', priority: -20, children: { [DIRECTORY_FLOW]: { kind:'single', scope:'root' } } }, Tree)); treeEnabled = true; }
-        else { releaseTree?.(); releaseTree = undefined; treeEnabled = false; }
+        const update = () => {
+          if (prefs.tree) { releaseTree = ctx.slots.inject('sidebar.workspaces', () => ctx.slots.register({ name: 'sidebar.workspaces', priority: -20, children: { [DIRECTORY_FLOW]: { kind:'single', scope:'root' } } }, Tree)); treeEnabled = true; }
+          else { releaseTree?.(); releaseTree = undefined; treeEnabled = false; }
+        };
+        if (treeEnabled !== undefined && surfaceMotion) surfaceMotion.switchWorkspace(update); else update();
       }
     };
     const unsubscribe = controller.subscribe(sync);
-    const releaseSettings = ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'liquid-glass', label: () => 'Liquid Glass', order: 12 }, () => <Settings controller={controller} skin={skin} appearance={appearance}/>));
+    const releaseSettings = ctx.slots.inject('settings.section', () => ctx.slots.register({ name: 'settings.section', id: 'liquid-glass', label: () => 'DSH 超级工作台', order: 12 }, () => <Settings controller={controller} skin={skin} appearance={appearance}/>));
     const releaseFooter = ctx.slots.inject('sidebar.footer.action', () => ctx.slots.register({ name: 'sidebar.footer.action', id: 'liquid-glass-view', order: Number.MAX_SAFE_INTEGER }, props => <FooterToggle {...props} controller={controller}/>));
     // Wait for persisted preferences before shadowing the native tree or touching theme tokens.
-    controller.refresh().then(() => { if (!controller.getSnapshot().error) { sync(); console.info('[dsh-liquid-glass] client 0.8.0 ready'); } });
-    return () => { unsubscribe(); releaseTree?.(); releaseTokens?.(); releaseShell?.(); releaseEffort?.(); releaseWaiting?.(); releaseBrands.forEach(release => release()); skin.dispose(); workspacePicker.dispose(); releaseDirectoryFlow(); appearance.dispose(); releaseSettings(); releaseFooter(); controller.dispose(); delete document.body.dataset.liquidGlass; clearPresentation(); style.remove(); };
+    controller.refresh().then(() => { if (!controller.getSnapshot().error) { sync(); console.info(`[dsh-super-nexusx] client ${version} ready`); } });
+    return () => { unsubscribe(); releasePet(); context.dispose(); surfaceMotion?.dispose(); releaseTree?.(); releaseTokens?.(); releaseShell?.(); releaseEffort?.(); releaseWaiting?.(); releaseBrands.forEach(release => release()); skin.dispose(); workspacePicker.dispose(); releaseDirectoryFlow(); appearance.dispose(); releaseSettings(); releaseFooter(); controller.dispose(); delete document.body.dataset.liquidGlass; clearPresentation(); style.remove(); };
   }, 'liquid-glass: theme, folder tree and settings');
 }

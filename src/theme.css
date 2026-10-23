@@ -282,3 +282,5 @@ body[data-liquid-glass="on"] .lg-ces-inline[data-lg-ces-part="root"] { animation
 @keyframes lg-slider-reveal { from { opacity:0; clip-path:inset(0 0 100% 0); } to { opacity:1; clip-path:inset(-16px -16px -16px -16px); } }
 body[data-liquid-glass="on"][data-lg-motion="off"] :is([id$="-menu"],[id$="-menu"]>*,.lg-ces-inline,.lg-ces-set) { animation:none!important; }
 @media(prefers-reduced-motion:reduce) { body[data-liquid-glass="on"] :is([id$="-menu"],[id$="-menu"]>*,.lg-ces-inline,.lg-ces-set) { animation:none!important; } }
+
+.lg-context-meter{font-size:11px;color:var(--lg-muted);white-space:normal;line-height:1.4;padding:2px 6px}

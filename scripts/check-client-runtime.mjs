@@ -5,45 +5,56 @@ import { createServer } from 'node:http';
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
+import { ResizeObserver } from '@juggle/resize-observer';
 import { createStateHandler, API_PATH } from '../src/http.js';
 import { createAppearanceSource } from '../src/appearance.js';
 import { emptyState } from '../src/model.js';
 
-const core = '/Applications/DSH Desktop Beta.app/Contents/Resources/app/node_modules/@deepseek-ai';
+const core = process.env.DSH_MODULE_ROOT || '/Applications/DSH Desktop Beta.app/Contents/Resources/app/node_modules/@deepseek-ai';
 const cordis = await import(pathToFileURL(`${core}/cordis/lib/index.js`));
 const slots = await import(pathToFileURL(`${core}/dsh-client-ui-slots/lib/index.js`));
 const require = createRequire(import.meta.url);
 const modules = new Map([
   ['@deepseek-ai/cordis', cordis], ['@deepseek-ai/dsh-client-ui-slots', slots], ['@deepseek-ai/dsh-client-store', {}],
   ['@deepseek-ai/dsh-client-ui-primitives', {}],
-  ...['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime'].map(id => [id, require(id)]),
 ]);
-let state = emptyState(); let poll;
+let state = emptyState(); const intervals = new Map(); let timerSequence=0;
 const server = createServer(createStateHandler({ read: () => state, write: async value => { state = value; }, catalog: () => [] }));
 await new Promise(resolve => server.listen(0, '127.0.0.1', resolve));
 const base = `http://127.0.0.1:${server.address().port}`;
 const dom = new JSDOM('<!doctype html><html><head></head><body></body></html>', { pretendToBeVisual: true });
 const document = dom.window.document; const body = document.body;
+// ReactDOM must see the same real DOM as the VM before its module initializes.
+for (const key of ['window', 'document', 'HTMLElement', 'HTMLIFrameElement', 'Element', 'SVGElement', 'MutationObserver']) globalThis[key] = dom.window[key];
+globalThis.requestAnimationFrame = dom.window.requestAnimationFrame.bind(dom.window);
+globalThis.getComputedStyle = dom.window.getComputedStyle.bind(dom.window);
+dom.window.ResizeObserver = ResizeObserver;
+for (const id of ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime']) modules.set(id, require(id));
 const styles = { get size() { return document.head.querySelectorAll('style[data-plugin="dsh-liquid-glass"]').length; } };
 const mediaListeners=new Set(); const media={matches:false,addEventListener:(_,fn)=>mediaListeners.add(fn),removeEventListener:(_,fn)=>mediaListeners.delete(fn)};
+dom.window.matchMedia=()=>media;
+dom.window.__ModuleLoader__={ load: ({ id, factory }) => modules.set(id, factory(id => { if (!modules.has(id)) throw new Error(`Missing module: ${id}`); return modules.get(id); })) };
 const sandbox = vm.createContext({
   matchMedia:()=>media,
-  window: { __ModuleLoader__: { load: ({ id, factory }) => modules.set(id, factory(id => { if (!modules.has(id)) throw new Error(`Missing module: ${id}`); return modules.get(id); })) } },
+  window: dom.window, navigator: dom.window.navigator,
   document, console, AbortController, AbortSignal, structuredClone, MutationObserver: dom.window.MutationObserver, queueMicrotask,
   setTimeout, clearTimeout,
-  setInterval: callback => { poll = callback; return 1; }, clearInterval: () => {},
+  setInterval: (callback, ms) => { const id=++timerSequence;intervals.set(id,{callback,ms});return id; }, clearInterval: id => intervals.delete(id),
   fetch: (path, options) => fetch(base + path, options),
 });
 const load = async (path, id) => { vm.runInContext(await readFile(path, 'utf8'), sandbox, { filename: String(path) }); return modules.get(id); };
 const { SlotRegistry } = await load(`${core}/dsh-client-ui-renderer/lib/client.js`, '@deepseek-ai/dsh-client-ui-renderer');
 const { ThemeRuntime } = await load(`${core}/dsh-client-ui-theme/lib/client.js`, '@deepseek-ai/dsh-client-ui-theme');
-const plugin = await load(new URL('../lib/client.js', import.meta.url), 'dsh-liquid-glass-skin');
+const plugin = await load(new URL('../lib/client.js', import.meta.url), 'dsh-super-nexusx');
 const ctx = new cordis.Context();
+ctx.logger.exporter({ export: message => { if (message.type === 'error') console.error(message.content); } });
 const registry = new SlotRegistry(ctx);
 let durableTheme={preference:'system',fontSize:14,codeFontSize:11,terminalFontSize:13,textFontFamily:'',codeFontFamily:'',terminalFontFamily:''}; const themeListeners=new Set();
 const themeForm = { getSnapshot: () => ({value:durableTheme}), subscribe: fn => { themeListeners.add(fn); return () => themeListeners.delete(fn); }, set:async (key,value) => { durableTheme={...durableTheme,[key]:value}; for(const fn of themeListeners)fn(); return true; } };
 const theme = new ThemeRuntime(ctx, themeForm);
-ctx.provide('configForms',{get:()=>themeForm});
+const formReads = [];
+ctx.provide('configForms',{get:id=>{formReads.push(id);return themeForm;}, describe:()=>({getSnapshot:()=>({view:{namespaces:[{ns:process.env.DSH_TEST_CONFIG_ID || 'super-nexusx-local'}]}})}),whileServed:(_,register)=>register()});
+ctx.provide('locale',{register:()=>()=>{},bind:()=>key=>key});
 ctx.provide('theme', theme);
 ctx.provide('workspaces', { list: { getSnapshot: () => ({ items: [], archivedSessionIds: [] }), subscribe: () => () => {} } });
 ctx.provide('sessions', { list: { getSnapshot: () => ({ byId: {} }), subscribe: () => () => {} } });
@@ -54,6 +65,12 @@ const releaseRoot = registry.register({ name: 'root', children: {
   'sidebar.brand.name': { kind: 'single', scope: 'root' },
   'conversation.hero.brand.mark': { kind: 'single', scope: 'root' },
   'sidebar.footer.action': { kind: 'list', scope: 'root' },
+  'plugins.bundle.config': {kind:'keyed',scope:'root'},
+  'conversation.view': {kind:'list',scope:'session'},
+  'conversation.chat.assistant-actions': {kind:'list',scope:'session'},
+  'conversation.input.overlay': {kind:'list',scope:'session'},
+  'main': {kind:'keyed',scope:'root'},
+  'sidebar.panellist': {kind:'list',scope:'root'},
   'settings.section': { kind: 'list', scope: 'root' },
   'conversation.input.right': { kind: 'list', scope: 'session' },
 } }, native);
@@ -65,22 +82,27 @@ let dispose;
 try {
   const fiber = ctx.plugin(plugin);
   dispose = () => fiber.dispose();
-  await waitFor(() => registry.entriesOfSlot('sidebar.workspaces')[0]?.options.priority === -20);
+  await waitFor(() => registry.entriesOfSlot('sidebar.workspaces')[0]?.options.priority === -20 && registry.entries('sidebar.brand.name').length === 1);
+  assert.ok(formReads.includes(process.env.DSH_TEST_CONFIG_ID || 'super-nexusx-local'));
+  assert.ok(!formReads.includes('dsh-context'));
+  assert.ok(registry.entries('plugins.bundle.config').some(entry=>entry.options.key==='dsh-super-nexusx'));
+  assert.ok(registry.entries('conversation.view').some(entry=>entry.options.id==='context'));
+  assert.ok(registry.entries('sidebar.panellist').some(entry=>entry.options.id==='dsh-context'));
   assert.equal(registry.entries('sidebar.brand.name').length, 1);
   assert.equal(registry.entries('conversation.hero.brand.mark').length, 1);
-  assert.equal(registry.entries('settings.section')[0].options.label(), 'Liquid Glass');
+  assert.equal(registry.entries('settings.section')[0].options.label(), 'DSH 超级工作台');
   const treeEntry=registry.entriesOfSlot('sidebar.workspaces')[0];
   assert.equal(treeEntry.children['sidebar.workspaces.directoryFlow'],undefined);
   assert.equal(treeEntry.children['liquid-glass.workspace.directoryFlow'].kind,'single');
   assert.equal(registry.entries('liquid-glass.workspace.directoryFlow')[0].component,nativePicker);
   assert.equal(registry.entries('liquid-glass.workspace.directoryFlow')[0].inject().pickerKind,'browse');
   assert.equal(body.dataset.lgMotion, 'full');
-  assert.equal(registry.entries('conversation.input.right').length, 0);
+  assert.equal(registry.entries('conversation.input.right').length, 1);
   ctx.provide('remote', {});
   ctx.provide('remote.session', {});
   ctx.provide('modelDirectories', { directoryFor: () => { throw new Error('No preview session'); } });
-  await waitFor(() => registry.entries('conversation.input.right').length === 1);
-  assert.equal(registry.entries('conversation.input.right')[0].options.id, 'liquid-glass-effort-slider');
+  await waitFor(() => registry.entries('conversation.input.right').length === 2);
+  assert.ok(registry.entries('conversation.input.right').some(entry => entry.options.id === 'liquid-glass-effort-slider'));
   assert.equal(document.querySelectorAll('style[data-plugin-css="dsh-liquid-glass-effort-slider"]').length, 1);
   const appearance=createAppearanceSource(ctx); let themeEvents=0; const offTheme=appearance.subscribe(()=>themeEvents++);
   for(const mode of ['light','dark','system']) { await appearance.select(mode); assert.equal(theme.getTheme().preference,mode); assert.equal(durableTheme.preference,mode); assert.equal(state.preferences.theme,true); }
@@ -91,7 +113,7 @@ try {
   assert.equal(registry.entries('sidebar.workspaces').length, 2);
   const update = async patch => {
     const response = await fetch(base + API_PATH, { method: 'POST', headers: { 'X-DSH-Liquid-Glass': '1', 'Content-Type': 'application/json' }, body: JSON.stringify({ revision: state.revision, operation: { type: 'preferences', patch } }) });
-    assert.equal(response.status, 200); poll();
+    assert.equal(response.status, 200); for(const timer of intervals.values())if(timer.ms===15000)timer.callback();
   };
   for (let i=0;i<4;i++) {
     await update({tree:false}); await waitFor(()=>registry.entriesOfSlot('sidebar.workspaces')[0]?.component===native);
@@ -107,13 +129,17 @@ try {
   await update({ tree: false, theme: false });
   await waitFor(() => registry.entriesOfSlot('sidebar.workspaces')[0]?.component === native && theme.overrides.size === 0);
   assert.equal(body.dataset.liquidGlass, undefined);
-  await waitFor(() => registry.entries('conversation.input.right').length === 0);
+  await waitFor(() => registry.entries('conversation.input.right').length === 1);
   assert.equal(document.querySelector('style[data-plugin-css="dsh-liquid-glass-effort-slider"]'), null);
   await update({ tree: true, theme: true });
   await waitFor(() => registry.entriesOfSlot('sidebar.workspaces')[0]?.options.priority === -20);
   assert.equal(theme.overrides.size, 1);
-  await waitFor(() => registry.entries('conversation.input.right').length === 1);
+  await waitFor(() => registry.entries('conversation.input.right').length === 2);
   await dispose();
+  assert.equal(intervals.size,0);
+  assert.equal(document.querySelectorAll('style[data-plugin="dsh-context"]').length,0);
+  assert.equal(registry.entries('conversation.view').length,0);
+  assert.equal(registry.entries('sidebar.panellist').length,0);
   assert.equal(registry.entriesOfSlot('sidebar.workspaces')[0].component, native);
   assert.equal(registry.entries('sidebar.footer.action').length, 0);
   assert.equal(registry.entries('settings.section').length, 0);

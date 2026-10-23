@@ -97,7 +97,7 @@ export function attachWaitingLine(ctx, sessionId, root, controller) {
       warned = false;
     } catch (error) {
       release();
-      if (!warned) { console.error('[dsh-liquid-glass] waiting line could not attach', error); warned = true; }
+      if (!warned) { console.error('[dsh-super-nexusx] waiting line could not attach', error); warned = true; }
     }
   };
   const observer = new MutationObserver(records => {

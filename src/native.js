@@ -33,7 +33,7 @@ export function createCreationActions(ctx, controller, workspacePicker) {
         if (folderId !== null) await controller.mutate({ type:'session.move', id, workspaceId, folderId });
       } catch (error) {
         ctx.uiWorkspace.openSession(id);
-        throw new Error(`会话已创建，但目录归类未保存：${error.message}`);
+        throw new Error(`会话已创建，但目录归类未保存：${error.message}`, { cause: error });
       }
       ctx.uiWorkspace.openSession(id); return id;
     },

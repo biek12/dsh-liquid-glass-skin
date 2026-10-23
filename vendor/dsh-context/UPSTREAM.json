@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/bowenliang123/dsh-context",
+  "version": "0.74.0",
+  "commit": "77749653063a",
+  "tarballSha256": "5e1c3c6c25bc8bc4dae0477d9c6e1f3b784952fc6a7c3e1545c3ca72630d061c",
+  "bundleChanges": "Deferred client factory and settings-card package selector; configuration mapping lives in src/context-plugin.js."
+}

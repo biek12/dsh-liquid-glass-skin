@@ -46,18 +46,11 @@ export function installSkinChoice({ controller, doc = document }) {
     if (appearance?.row.contains(target)) choose(false).catch(() => {});
   };
   const releaseObserver = watchShell(doc, sync);
-  // Skins activated from the market can mount without the Appearance page being open.
-  const skinObserver = new MutationObserver(records => {
-    if (selecting || !enabled()) return;
-    const foreign = records.some(({ attributeName: name }) => name !== 'data-liquid-glass' && name !== 'data-ds-dark-theme' && /^data-.*(?:skin|kimino)/i.test(name ?? '') && !['', 'false', 'off', 'none', 'native', '0'].includes(doc.body.getAttribute(name) ?? ''));
-    if (foreign) choose(false).catch(() => {});
-  });
-  skinObserver.observe(doc.body, { attributes: true });
   doc.addEventListener('click', nativeChoice, true);
   const unsubscribe = controller.subscribe(sync); sync();
   return {
     choose,
-    dispose: () => { disposed = true; releaseObserver(); skinObserver.disconnect(); unsubscribe(); doc.removeEventListener('click', nativeChoice, true); mounted?.remove(); },
+    dispose: () => { disposed = true; releaseObserver(); unsubscribe(); doc.removeEventListener('click', nativeChoice, true); mounted?.remove(); },
   };
 }
 

@@ -98,3 +98,14 @@ test('presentation settings validate enums and booleans without touching metadat
   assert.deepEqual(next.folders,state.folders); assert.deepEqual(next.sessions,state.sessions);
   for (const patch of [{motion:'fast'}, {orb:'false'}, {glass:'invisible'}, {density:1}, {showCounts:null}]) assert.throws(() => run(state,{type:'preferences',patch}));
 });
+
+test('workspace order migrates legacy states, survives reload and rejects hierarchy writes atomically', () => {
+  const state = emptyState(); delete state.workspaceOrder;
+  assert.deepEqual(validateState(state).workspaceOrder, []);
+  const moved = run(state, {type:'workspace.move',id:'b',beforeId:'a'});
+  assert.deepEqual(validateState(JSON.parse(JSON.stringify(moved))).workspaceOrder,['b','a']);
+  const before = JSON.stringify(moved);
+  assert.throws(()=>run(moved,{type:'workspace.move',id:'b',beforeId:'a',parentId:'folder'}));
+  assert.throws(()=>run(moved,{type:'workspace.move',id:'missing',beforeId:'a'}));
+  assert.equal(JSON.stringify(moved),before);
+});

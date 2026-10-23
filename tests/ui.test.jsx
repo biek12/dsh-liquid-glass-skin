@@ -1,9 +1,11 @@
+import { summarizeContext, priceBook } from '../src/context.jsx';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JSDOM } from 'jsdom';
 import React, { act } from 'react';
 import { placeMenu } from '../src/menu.jsx';
 import { Settings } from '../src/settings.jsx';
+import { FloatingPet, PetSettings } from '../src/pets/pet.jsx';
 import { FolderTree } from '../src/ui.jsx';
 import { createController } from '../src/controller.js';
 import { applyOperation, defaultMeta, emptyState } from '../src/model.js';
@@ -14,7 +16,55 @@ globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 const { createRoot } = await import('react-dom/client');
 HTMLDialogElement.prototype.showModal = function () { this.open = true; };
 HTMLDialogElement.prototype.close = function () { this.open = false; };
+async function waitForUI(condition, timeout = 3500) {
+  const deadline = Date.now() + timeout;
+  while (!condition()) {
+    assert.ok(Date.now() < deadline, 'Timed out waiting for UI transition');
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 25)); });
+  }
+}
 const catalog = [{ workspaceId: 'a', title: '工作区 A', sessionIds: ['s1', 's2'], sessions: [{ id: 's1', title: '会话一' }, { id: 's2', title: '会话二' }] }, { workspaceId: 'b', title: '工作区 B', sessionIds: [], sessions: [] }];
+test('pet interactions select real animation states, show dialogue and persist drag position', async t => {
+  const controller = createController({ initial: emptyState(), poll: false, persist: async (state, op) => applyOperation(state, op, catalog) });
+  const container = document.createElement('div'); document.body.append(container); const root = createRoot(container);
+  await act(async () => root.render(<FloatingPet controller={controller}/>));
+  t.after(async () => { await act(async () => root.unmount()); controller.dispose(); container.remove(); });
+  const body = container.querySelector('.lg-pet-body');
+  assert.equal(container.querySelector('.lg-pet-sprite').dataset.state, 'idle');
+  await act(async () => body.focus());
+  assert.equal(container.querySelector('.lg-pet-sprite').dataset.state, 'hover');
+  assert.match(container.querySelector('.lg-pet-dialogue').textContent, /摸摸头/);
+  await waitForUI(() => container.querySelector('#lg-pet-card')?.dataset.phase === 'shown');
+  body.setPointerCapture = () => {}; body.releasePointerCapture = () => {};
+  const pointer = (type, x, y) => body.dispatchEvent(new window.MouseEvent(type, { bubbles: true, button: 0, clientX: x, clientY: y }));
+  await act(async () => { pointer('pointerdown', 600, 400); pointer('pointermove', 300, 200); });
+  assert.equal(container.querySelector('.lg-pet-sprite').dataset.state, 'drag');
+  await waitForUI(() => container.querySelector('#lg-pet-card')?.dataset.phase === 'exit');
+  assert.match(container.querySelector('.lg-pet-dialogue').textContent, /摸摸头/);
+  await waitForUI(() => container.querySelector('.lg-pet-drag-speech'));
+  assert.match(container.querySelector('.lg-pet-drag-speech').textContent, /爪爪/);
+  await act(async () => { pointer('pointerup', 300, 200); await new Promise(resolve => setTimeout(resolve, 0)); });
+  const p = controller.getSnapshot().state.preferences;
+  assert.ok(p.petX < 0.92 && p.petY < 0.86);
+  assert.equal(container.querySelector('.lg-pet-sprite').dataset.state, 'land');
+  await waitForUI(() => container.querySelector('.lg-pet-drag-speech')?.textContent.includes('爪爪着地'));
+  assert.match(container.querySelector('.lg-pet-drag-speech').textContent, /爪爪着地/);
+  await act(async () => controller.mutate({ type: 'preferences', patch: { petEnabled: false } }));
+  assert.equal(container.querySelector('.lg-pet'), null);
+});
+test('pet character selection survives reload and rejected positions preserve durable preferences', async t => {
+  let durable = emptyState();
+  const controller = createController({ initial: durable, poll: false, persist: async (state, op) => { durable = applyOperation(state, op, catalog); return durable; } });
+  const container = document.createElement('div'); document.body.append(container); const root = createRoot(container);
+  await act(async () => root.render(<PetSettings controller={controller}/>));
+  t.after(async () => { await act(async () => root.unmount()); controller.dispose(); container.remove(); });
+  await act(async () => container.querySelectorAll('.lg-pet-choices button')[2].click());
+  assert.equal(durable.preferences.petCharacter, 'mizu');
+  assert.equal(container.querySelectorAll('.lg-pet-choices button')[2].getAttribute('aria-pressed'), 'true');
+  const previous = JSON.stringify(durable);
+  await act(async () => { await assert.rejects(controller.mutate({ type: 'preferences', patch: { petX: Infinity } })); });
+  assert.equal(JSON.stringify(durable), previous);
+});
 async function fixture(t, overrides = {}) {
   localStorage.clear();
   const initial = emptyState();
@@ -236,4 +286,63 @@ test('expanded tree exposes native workspace creation and folder-local conversat
  const calls=[];const f=await fixture(t,{createWorkspace:async()=>{calls.push('workspace');return {workspaceId:'new'};},createSession:async (...args)=>calls.push(args)});
  await act(async()=>f.container.querySelector('[aria-label="添加工作区"]').click());assert.deepEqual(calls,['workspace']);
  await act(async()=>f.row('child').querySelector('[data-edit]').click());const create=[...f.container.querySelectorAll('[role="menuitem"]')].find(b=>b.textContent==='新建会话');await act(async()=>create.click());assert.deepEqual(calls,['workspace',['a','child']]);
+});
+
+test('project drag persists top-level order and refuses nesting into any folder or session', async t => {
+  const f = await fixture(t);
+  assert.equal(f.row('a').draggable, true);
+  assert.equal(await drag(f, 'b', 'a', 2), true);
+  assert.deepEqual(f.controller.getSnapshot().state.workspaceOrder, ['b','a']);
+  assert.deepEqual([...f.container.querySelectorAll('[data-kind="workspace"]')].map(row=>row.dataset.id), ['b','a']);
+  const before = JSON.stringify(f.controller.getSnapshot().state);
+  assert.equal(await drag(f, 'b', 'child'), false);
+  assert.equal(await drag(f, 'b', 's1'), false);
+  assert.equal(JSON.stringify(f.controller.getSnapshot().state), before);
+  assert.equal(await drag(f, 'b', 'a', 38), true);
+  assert.deepEqual(f.controller.getSnapshot().state.workspaceOrder, ['a','b']);
+});
+
+test('context summary shares upstream pricing, current occupancy and daily ledger without treating missing data as zero', () => {
+  const book = priceBook({deepseek:{models:{'deepseek-flash':{cost:{input:1,cache_read:0.1,output:2}}}}});
+  const cost = {deepseek:{'deepseek-flash':{off:{uncached:150000,cacheRead:0,cacheWrite:0,output:0}}}};
+  const summary = summarizeContext({current:'s1',byId:{s1:{id:'s1',projectionValues:{contextPressure:{projectedTokens:500,contextWindow:1000},contextTimeline:{cost},contextActivity:{days:{'2026-10-23':{tokens:150000,requests:1,cost}}}}}}}, book, new Date(2026,9,23));
+  assert.equal(summary.occupancy,50); assert.equal(summary.todayCost,'¥1.00'); assert.equal(summary.sessionCost,'¥1.00');
+  assert.equal(summarizeContext({byId:{}}, book).todayCost,null);
+  assert.equal(summarizeContext({byId:{}}, book).occupancy,null);
+});
+
+test('pet bubble retains balance through an outage and closes by deadline after pointer leave', async t => {
+  const controller=createController({initial:emptyState(),poll:false,persist:async(state,op)=>applyOperation(state,op,catalog)});
+  let failed=false;
+  const account=async()=>{if(failed)throw Error('temporary outage');return {ok:true,value:{status:'ready',value:[],bonusWallets:[{currency:'CNY',balance:'8.25'}]}};};
+  const summary={todayTokens:12345,todayCost:'¥0.23',sessionCost:'¥0.10'};
+  const context={subscribe:()=>()=>{},getSnapshot:()=>summary};
+  const container=document.createElement('div');document.body.append(container);const root=createRoot(container);
+  t.after(async()=>{await act(async()=>root.unmount());controller.dispose();container.remove();});
+  await act(async()=>root.render(<FloatingPet controller={controller} account={account} context={context}/>));
+  const body=container.querySelector('.lg-pet-body');
+  await act(async()=>body.focus());
+  await waitForUI(() => container.querySelector('.lg-pet-card')?.textContent.includes('¥8.25'));
+  let card=container.querySelector('.lg-pet-card');
+  assert.match(card.textContent,/¥8.25/);assert.match(card.textContent,/12,345 tokens/);assert.match(card.textContent,/¥0.23/);
+  for(const removed of ['糯米','奶油小猫','当前上下文','官方规则','关闭','暂时','待识别']) assert.ok(!card.textContent.includes(removed),removed);
+  assert.equal(card.querySelector('button'),null);
+  body.setPointerCapture=()=>{};body.releasePointerCapture=()=>{};
+  await act(async()=>{body.dispatchEvent(new window.MouseEvent('pointerdown',{bubbles:true,button:0}));body.dispatchEvent(new window.MouseEvent('pointerup',{bubbles:true,button:0}));body.dispatchEvent(new window.MouseEvent('pointerout',{bubbles:true,relatedTarget:document.body}));await new Promise(resolve=>setTimeout(resolve,180));});
+  assert.equal(container.querySelector('#lg-pet-card').dataset.phase,'shown');
+  await waitForUI(() => !container.querySelector('#lg-pet-card'), 10000);
+  failed=true;
+  await act(async()=>{body.blur();body.focus();});
+  card=container.querySelector('.lg-pet-card');assert.match(card.textContent,/¥8.25/);assert.ok(!card.textContent.includes('temporary outage'));
+});
+
+test('daily context totals include each subagent once and distinguish an empty day from missing projections', () => {
+  const cost={deepseek:{'deepseek-flash':{off:{uncached:150000,cacheRead:0,cacheWrite:0,output:0}}}};
+  const book=priceBook({deepseek:{models:{'deepseek-flash':{cost:{input:1,output:2}}}}});
+  const row=(id,parentId,tokens)=>({id,parentId,projectionValues:{contextTimeline:{cost},contextActivity:{days:{'2026-10-23':{tokens,requests:1,cost}}}}});
+  const snapshot={current:'a',byId:{a:row('a',null,10),b:row('b','a',20)}};
+  const summary=summarizeContext(snapshot,book,new Date(2026,9,23));
+  assert.equal(summary.todayTokens,30);assert.equal(summary.todayCost,'¥2.00');assert.equal(summary.sessionCost,'¥2.00');
+  assert.equal(summarizeContext(snapshot,book,new Date(2026,9,24)).todayTokens,0);
+  assert.equal(summarizeContext({byId:{a:{id:'a'}}},book,new Date(2026,9,23)).todayTokens,null);
 });

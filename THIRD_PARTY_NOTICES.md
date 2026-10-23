@@ -44,3 +44,9 @@ motion and timer/animation disposal are integrated with the existing preferences
 subscription, native-row ownership, state copy, elapsed clock and overtime badge.
 It reads DSH's `uiConversation` chat target and does not modify conversation events.
 These portions are covered by the Nwflower and Transitions.dev notices above.
+
+## dsh-context
+
+Includes the complete published host and client bundles of [dsh-context](https://github.com/bowenliang123/dsh-context), version 0.74.0, commit 77749653063a, by bowenliang123, under Apache-2.0. License: `licenses/dsh-context.LICENSE`. Original attribution banners are retained.
+
+The client bundle is wrapped in a deferred factory for lifecycle ownership, and its settings-card DOM selector points to the enclosing package. The integration adapter maps the upstream configuration form and settings navigation to the enclosing Super Nexusx plugin. The original cost estimator is reused from the same release source for the main-window and desktop pets. All upstream panel surfaces remain registered by the original client.

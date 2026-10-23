@@ -14,15 +14,13 @@ function fixture(t) {
 test('native Appearance and skin choices release each other and unload cleanly', async t => {
   const {doc,controller} = fixture(t); const adapter = installSkinChoice({controller,doc}); t.after(adapter.dispose);
   assert.equal(doc.querySelectorAll('.lg-appearance-choice').length, 1);
-  const native = doc.querySelectorAll('.test_themeCube'); let otherEnabled = true;
+  const native = doc.querySelectorAll('.test_themeCube'); let otherEnabled;
   native.forEach(button => button.addEventListener('click', () => { otherEnabled = false; }, true));
   native[0].click(); await flush(); assert.equal(controller.getSnapshot().state.preferences.theme, false);
   otherEnabled = true; doc.querySelector('.lg-appearance-choice').click(); await flush();
   assert.equal(otherEnabled, false); assert.equal(controller.getSnapshot().state.preferences.theme, true);
   const foreign = doc.createElement('button'); foreign.textContent = '其他皮肤'; doc.querySelector('.test_cubeRow').append(foreign);
   foreign.click(); await flush(); assert.equal(controller.getSnapshot().state.preferences.theme, false);
-  await adapter.choose(true); doc.body.setAttribute('data-liang-skin', 'on'); await flush();
-  assert.equal(controller.getSnapshot().state.preferences.theme, false);
   adapter.dispose(); assert.equal(doc.querySelector('.lg-appearance-choice'), null);
   native[0].click(); await flush(); assert.equal(controller.getSnapshot().state.preferences.theme, false);
 });

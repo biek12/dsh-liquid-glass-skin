@@ -1,15 +1,15 @@
 import { build } from 'esbuild';
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir } from 'node:fs/promises';
+await import('./prepare-context.mjs');
 await mkdir('lib', { recursive: true });
-await mkdir('releases', { recursive: true });
+await mkdir('lib/desktop', { recursive: true });
+await import('./prepare-notification-chime.mjs');
 await build({ entryPoints: ['src/host.js'], outfile: 'lib/index.js', bundle: true, platform: 'node', format: 'esm', target: 'node22', sourcemap: true });
+await build({ entryPoints: ['desktop/main.jsx'], outfile: 'lib/desktop/pet.js', bundle: true, platform: 'browser', format: 'iife', loader: { '.css':'text', '.png':'dataurl', '.webp':'dataurl' }, target:'safari17' });
 await build({
   entryPoints: ['src/client.jsx'], outfile: 'lib/client.js', bundle: true, platform: 'browser', format: 'cjs', target: 'chrome130',
-  external: ['react', 'react-dom', 'react/jsx-runtime'], loader: { '.css': 'text' }, sourcemap: true,
-  banner: { js: 'window.__ModuleLoader__.load({id:"dsh-liquid-glass-skin",factory:(require)=>{var module={exports:{}};var exports=module.exports;' },
+  external: ['react', 'react-dom', 'react-dom/client', 'react/jsx-runtime', '@deepseek-ai/dsh-client-ui-primitives'], loader: { '.css': 'text', '.png': 'dataurl', '.webp': 'dataurl' }, sourcemap: true,
+  banner: { js: 'window.__ModuleLoader__.load({id:"dsh-super-nexusx",factory:(require)=>{var module={exports:{}};var exports=module.exports;' },
   footer: { js: 'return module.exports;}});' },
 });
-await import('./prepare-native-preview.mjs');
-await build({ entryPoints: ['preview/main.jsx'], outfile: 'preview/dist/app.js', bundle: true, platform: 'browser', format: 'esm', loader: { '.css': 'text' }, target: 'chrome130' });
-await writeFile('preview/dist/index.html', '<!doctype html><html lang="zh-CN"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DSH · Liquid Glass 交互预览</title></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>');
-console.log('Built DSH host, client module and interactive preview.');
+console.log('Built DSH host, client and desktop web assets.');
