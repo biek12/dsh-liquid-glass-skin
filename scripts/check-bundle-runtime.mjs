@@ -5,11 +5,13 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { releaseTarget, releaseName } from './lib/release-target.mjs';
 
 const core = process.env.DSH_MODULE_ROOT || '/Applications/DSH Desktop Beta.app/Contents/Resources/app/node_modules/@deepseek-ai';
 const { PluginManager } = await import(pathToFileURL(`${core}/dsh-plugin-manager/lib/index.js`));
 const pkg = JSON.parse(await readFile('package.json', 'utf8'));
-const tarball = resolve(`releases/${pkg.name}-${pkg.version}.tgz`);
+const target = releaseTarget(process.argv[2] || process.arch);
+const tarball = resolve(`releases/${releaseName(pkg, target)}`);
 const temporary = await mkdtemp(join(tmpdir(), 'super-nexusx-bundle-'));
 try {
   execFileSync('tar', ['-xzf', tarball, '-C', temporary]);

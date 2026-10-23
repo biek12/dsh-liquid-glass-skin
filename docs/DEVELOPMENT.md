@@ -24,7 +24,21 @@ npm run build
 npm run pack:plugin
 ```
 
-通用构建不读取本机 DSH 安装包，不依赖 Python 或 Swift。`prepack` 自动构建 JS；打包前可运行 `npm run build:desktop` 加入当前 macOS 架构的伴随程序。未包含该程序的平台仍可使用窗口内宠物。
+`npm run build` 只构建 JS，不读取本机 DSH 安装包，也不依赖 Python 或 Swift，可在 Linux CI 中运行。
+
+完整发行包只通过以下命令生成，要求 macOS 与 Xcode Command Line Tools：
+
+```bash
+npm run pack:plugin                   # 当前 CPU 的完整包
+npm run pack:plugin -- --arch arm64    # Apple Silicon 完整包
+npm run pack:plugin -- --arch x64      # Intel 完整包
+npm run release:build                 # 两个 CPU 包和 SHA256SUMS
+npm run test:release                  # 解包检查实际 CPU、权限、清单和校验值
+```
+
+规范命名为 `dsh-super-nexusx-<版本>-darwin-<arm64|x64>.tgz`。每次打包在隔离临时目录重新编译对应 CPU 的原生伴随程序，不使用上次构建遗留的可执行文件。随后写入平台约束、`BUILD_INFO.json` 及原生程序哈希，再将完整插件和伴随程序打成一个 tgz。发布包不携带开发期脚本或依赖，不需要在安装时联网下载或编译宠物程序。
+
+`npm pack` 自身仅是底层开发打包操作，不用于正式 Release。正式发布使用 `release:build` 的两个命名包及 SHA256SUMS。Windows / Linux 仅检查通用源码构建，本版不输出缺少原生伴随程序的完整发行包。
 
 `vendor/dsh-context/lib/` 是固定上游发布产物，参与 Host 和客户端构建，必须随源码保留；其来源和 tarball 哈希见 `UPSTREAM.json`。`src/vendor/context-client.cjs` 由构建脚本生成，不手工编辑。其余 `src/vendor/` 文件是经适配的上游实现。相关许可证见 `THIRD_PARTY_NOTICES.md`。
 
@@ -39,7 +53,7 @@ npm run test:bundle  # 先生成 releases/ 中的当前版本 tgz
 
 这两类验证需要本机安装 DSH。默认读取 macOS 的 `/Applications/DSH Desktop Beta.app/Contents/Resources/app/node_modules/@deepseek-ai`，其他位置可设置 `DSH_MODULE_ROOT`。预览生成的宿主 CSS 位于忽略的 `artifacts/` 中，不随插件分发。`test:installed` 使用临时存储，不改活动 Profile。`test:bundle` 解压真实 tgz，在临时 Profile 中调用宿主原始 `listBundles()`，验证文件入口不可见、包登记后可见，以及版本、翻译和 patch 行。
 
-`npm run build:desktop` 需要 macOS 与 Xcode Command Line Tools。生成的可执行文件只适用于构建机器的架构；发布时应标明架构，不应把它描述为跨平台二进制。
+`npm run build:desktop -- --arch arm64` 或 `--arch x64` 可为指定 CPU 编译本机预览所需的 `lib/desktop/PetCompanion`。编译目标为 macOS 13+；跨 CPU 编译不会自动执行另一架构的程序。CI 同时构建并解包检查两种发行包，但实机交互兼容性需要在对应设备验收。
 
 ## 兼容标识
 

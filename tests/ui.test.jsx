@@ -31,7 +31,7 @@ test('pet interactions select real animation states, show dialogue and persist d
   t.after(async () => { await act(async () => root.unmount()); controller.dispose(); container.remove(); });
   const body = container.querySelector('.lg-pet-body');
   assert.equal(container.querySelector('.lg-pet-sprite').dataset.state, 'idle');
-  await act(async () => body.focus());
+  await act(async () => body.click());
   assert.equal(container.querySelector('.lg-pet-sprite').dataset.state, 'hover');
   assert.match(container.querySelector('.lg-pet-dialogue').textContent, /摸摸头/);
   await waitForUI(() => container.querySelector('#lg-pet-card')?.dataset.phase === 'shown');
@@ -52,6 +52,47 @@ test('pet interactions select real animation states, show dialogue and persist d
   await act(async () => controller.mutate({ type: 'preferences', patch: { petEnabled: false } }));
   assert.equal(container.querySelector('.lg-pet'), null);
 });
+for (const desktop of [false, true]) {
+  test(`pet information is click-only and repeated clicks renew the same message (${desktop ? 'desktop' : 'window'})`, async t => {
+    t.mock.timers.enable({ apis: ['Date', 'setTimeout'] });
+    const controller = createController({ initial: emptyState(), poll: false, persist: async (state, op) => applyOperation(state, op, catalog) });
+    const container = document.createElement('div'); document.body.append(container); const root = createRoot(container);
+    t.after(async () => { await act(async () => root.unmount()); controller.dispose(); container.remove(); });
+    await act(async () => root.render(<FloatingPet controller={controller} desktop={desktop}/>));
+    const body = container.querySelector('.lg-pet-body');
+    const advance = async ms => { await act(async () => { t.mock.timers.tick(ms); }); };
+    const hover = () => body.dispatchEvent(new window.MouseEvent('pointerover', { bubbles: true, relatedTarget: document.body }));
+    await act(async () => { hover(); body.focus(); });
+    assert.equal(container.querySelector('#lg-pet-card'), null, 'hover and focus do not open information');
+    await act(async () => { body.click(); body.click(); });
+    const text = container.querySelector('.lg-pet-dialogue').textContent;
+    assert.match(text, /摸摸头/);
+    await advance(20); await advance(20);
+    const cloud = container.querySelector('#lg-pet-card');
+    assert.equal(cloud.dataset.phase, 'shown');
+    await advance(7000);
+    body.setPointerCapture = () => {}; body.releasePointerCapture = () => {};
+    await act(async () => {
+      body.dispatchEvent(new window.MouseEvent('pointerdown', { bubbles: true, button: 0 }));
+      body.dispatchEvent(new window.MouseEvent('pointerup', { bubbles: true, button: 0 }));
+      body.dispatchEvent(new window.MouseEvent('click', { bubbles: true, detail: 1 }));
+      hover(); body.blur(); body.focus();
+    });
+    assert.equal(container.querySelector('.lg-pet-dialogue').textContent, text);
+    assert.equal(cloud.dataset.phase, 'shown', 'repeated click does not start a content transition');
+    await advance(1100);
+    assert.equal(body.getAttribute('aria-expanded'), 'true', 'click renews the original deadline');
+    await advance(6900); await advance(1);
+    assert.equal(cloud.dataset.phase, 'exit');
+    await act(async () => body.click());
+    await advance(600);
+    assert.equal(container.querySelector('#lg-pet-card'), null, 'exit cannot be interrupted by another information message');
+    await act(async () => { hover(); body.blur(); body.focus(); });
+    assert.equal(container.querySelector('#lg-pet-card'), null);
+    await act(async () => body.click());
+    assert.notEqual(container.querySelector('.lg-pet-dialogue').textContent, text, 'a new click after closure can open the next message');
+  });
+}
 test('pet character selection survives reload and rejected positions preserve durable preferences', async t => {
   let durable = emptyState();
   const controller = createController({ initial: durable, poll: false, persist: async (state, op) => { durable = applyOperation(state, op, catalog); return durable; } });
@@ -321,7 +362,7 @@ test('pet bubble retains balance through an outage and closes by deadline after 
   t.after(async()=>{await act(async()=>root.unmount());controller.dispose();container.remove();});
   await act(async()=>root.render(<FloatingPet controller={controller} account={account} context={context}/>));
   const body=container.querySelector('.lg-pet-body');
-  await act(async()=>body.focus());
+  await act(async()=>body.click());
   await waitForUI(() => container.querySelector('.lg-pet-card')?.textContent.includes('¥8.25'));
   let card=container.querySelector('.lg-pet-card');
   assert.match(card.textContent,/¥8.25/);assert.match(card.textContent,/12,345 tokens/);assert.match(card.textContent,/¥0.23/);
@@ -332,7 +373,7 @@ test('pet bubble retains balance through an outage and closes by deadline after 
   assert.equal(container.querySelector('#lg-pet-card').dataset.phase,'shown');
   await waitForUI(() => !container.querySelector('#lg-pet-card'), 10000);
   failed=true;
-  await act(async()=>{body.blur();body.focus();});
+  await act(async()=>body.click());
   card=container.querySelector('.lg-pet-card');assert.match(card.textContent,/¥8.25/);assert.ok(!card.textContent.includes('temporary outage'));
 });
 

@@ -5,7 +5,7 @@
 
 为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 打造的开源工作台增强插件，把会话整理、Liquid Glass 主题、上下文洞察和陪伴宠物集中到同一套界面中。
 
-当前版本 **0.11.5**，处于早期迭代阶段。已适配的本机环境为 **DSH Desktop Beta 2.0.18-beta.1 / DSH 0.2.1-rc.2、macOS**。其他 DSH 版本和系统尚未完成实机兼容验证。
+当前版本 **0.11.6**，处于早期迭代阶段。已适配的本机环境为 **DSH Desktop Beta 2.0.18-beta.1 / DSH 0.2.1-rc.2、macOS**。其他 DSH 版本和系统尚未完成实机兼容验证。
 
 [安装指南](docs/INSTALLATION.md) · [开发说明](docs/DEVELOPMENT.md) · [更新记录](CHANGELOG.md) · [验证记录](docs/VALIDATION.md) · [问题反馈](https://github.com/biek12/dsh-super-nexusx/issues) · [参与贡献](CONTRIBUTING.md)
 
@@ -27,7 +27,7 @@
 | 上下文洞察 | 集成 dsh-context 0.74.0 的上下文、用量、附件、工具与多智能体相关面板 |
 | 陪伴宠物 | 糯米、月白、泡泡三款角色；待机、眨眼、拖拽、气泡与位置保存 |
 | 任务提醒 | 基于 Host 真实完成事件显示气泡；支持关闭声音与提醒，过滤取消、错误和子智能体完成 |
-| macOS 桌面陪伴 | 可选 AppKit / WebKit 透明伴随窗口，支持找回位置；需编译当前架构的原生模块 |
+| macOS 桌面陪伴 | 可选 AppKit / WebKit 透明伴随窗口，支持找回位置；发行 tgz 已内置对应 CPU 的原生程序 |
 
 主题可以关闭，目录功能可独立使用。用量与费用展示受宿主数据和计价表覆盖范围限制；缺失数据会显示不可用，不应作为账单依据。
 
@@ -44,13 +44,22 @@ npm test
 npm run pack:plugin
 ```
 
-如需 macOS 全桌面宠物，先运行 `npm run build:desktop`，再重新打包。此步骤需要 Xcode Command Line Tools，输出仅适用于当前 Mac 架构。
+也可直接从 [Releases](https://github.com/biek12/dsh-super-nexusx/releases/latest) 下载对应 CPU 的完整 tgz，无需自行编译或单独安装宠物程序：
+
+| 系统 / CPU | 完整安装包 |
+| --- | --- |
+| macOS / Apple Silicon（M 系列） | `dsh-super-nexusx-0.11.6-darwin-arm64.tgz` |
+| macOS / Intel | `dsh-super-nexusx-0.11.6-darwin-x64.tgz` |
+
+两种包均包含完整插件、桌面宠物原生程序、角色素材和提示音，要求 macOS 13+。M 系列使用 arm64 包原生运行，无需 Rosetta。Windows / Linux 的全桌面伴随尚未实现，本版不提供这两个系统的完整发行包。
+
+源码打包需要 macOS 与 Xcode Command Line Tools。`npm run pack:plugin` 自动构建当前 CPU 的完整包；`npm run release:build` 构建两个 CPU 的包并生成校验文件。
 
 先核对 `dsh --version` 与宿主版本一致，完全退出 DSH，再安装到实际使用的 Profile。macOS Desktop 内置 CLI 的明确调用方式见 [安装指南](docs/INSTALLATION.md)：
 
 ```bash
-# 以下为 Desktop Beta 默认 home / Profile 示例
-DSH_HOME="$HOME/.dsh-beta" dsh plugin --profile desktop add ./releases/dsh-super-nexusx-0.11.5.tgz
+# 以下为 Apple Silicon / Desktop Beta 默认 home 与 Profile 示例；Intel 使用 darwin-x64 包
+DSH_HOME="$HOME/.dsh-beta" dsh plugin --profile desktop add ./releases/dsh-super-nexusx-0.11.6-darwin-arm64.tgz
 ```
 
 重新打开 DSH，在“已安装插件”中查找 `dsh-super-nexusx`，并在设置中打开 **DSH 超级工作台**。不要只把入口路径写进 Cordis patch；这种方式可以运行插件，但不会登记到“已安装”列表。旧版本迁移、Profile 选择与卸载见 [安装指南](docs/INSTALLATION.md)。

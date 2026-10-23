@@ -7,7 +7,7 @@
 1. Fork 仓库，从 `master` 创建功能分支。
 2. 使用 Node.js 22.19+ 和 npm，运行 `npm ci`。
 3. 修改源码。保持现有风格、两空格缩进和模块边界；避免把生成文件、个人路径或安装日志加入仓库。
-4. 运行 `npm run check`、`npm test`、`npm run build`、`npm run pack:plugin`。
+4. 运行 `npm run check`、`npm test`、`npm run build`；在 macOS 上运行 `npm run release:build` 和 `npm run test:release`。
 5. 涉及桌面宠物时，在 macOS 运行 `npm run build:desktop`，并实测窗口拖动、退出清理和屏幕边缘布局。
 6. 提交 Pull Request，说明问题、改动、验证结果和已知限制。
 

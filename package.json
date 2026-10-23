@@ -1,6 +1,6 @@
 {
   "name": "dsh-super-nexusx",
-  "version": "0.11.5",
+  "version": "0.11.6",
   "description": "DSH Super Nexusx（DSH 超级工作台）：集成 Liquid Glass 主题、会话目录、陪伴宠物与上下文系统的 DSH 扩展",
   "type": "module",
   "license": "MIT",
@@ -36,7 +36,9 @@
     "check": "npm run lint && node scripts/check-project.mjs",
     "prepack": "npm run build",
     "lint": "eslint .",
-    "test:bundle": "node scripts/check-bundle-runtime.mjs"
+    "test:bundle": "node scripts/check-bundle-runtime.mjs",
+    "release:build": "node scripts/release.mjs",
+    "test:release": "node scripts/check-release.mjs"
   },
   "engines": {
     "node": ">=22.19"

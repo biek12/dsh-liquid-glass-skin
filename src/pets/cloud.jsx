@@ -4,17 +4,18 @@ import { placeBubble } from './bubble-layout.js';
 const EXIT_MS=540, TEXT_EXIT_MS=150, MIN_READ_MS=1400;
 
 /** A single presenter owns the cloud; incoming events replace the pending request, never the exiting frame. */
-export function CloudBubble({ open, anchor, screen, children, label, id='lg-pet-card', compact=false, contentKey='default' }) {
+export function CloudBubble({ open, anchor, screen, children, label, id='lg-pet-card', compact=false, contentKey='default', onHidden }) {
   const requested=useRef(null), displayed=useRef(null), phaseRef=useRef('hidden');
   const timer=useRef(), frame=useRef(), mounted=useRef(true), enteredAt=useRef(0);
   const [view,setView]=useState(null), [phase,setPhase]=useState('hidden'), [mode,setMode]=useState('full');
   const [height,setHeight]=useState(245), node=useRef(null), layoutRef=useRef(null);
   requested.current={open,children,label,compact,key:contentKey};
+  const hiddenCallback = useRef(onHidden); hiddenCallback.current = onHidden;
   const changePhase=value=>{phaseRef.current=value;setPhase(value);};
   const sameFamily=(a,b)=>a && b && a.compact===b.compact && a.key.split(':')[0]===b.key.split(':')[0];
   const reveal=(request,textOnly=false)=>{
     if (!mounted.current) return;
-    if (!request?.open) { displayed.current=null;setView(null);changePhase('hidden');return; }
+    if (!request?.open) { displayed.current=null;setView(null);changePhase('hidden');hiddenCallback.current?.();return; }
     const next={...request};displayed.current=next;setView(next);setMode(textOnly?'content':'full');
     enteredAt.current=Date.now();changePhase(textOnly?'content-enter':'enter');
     const raf=window.requestAnimationFrame??(fn=>setTimeout(fn,16));
